@@ -47,11 +47,11 @@ struct Card {
 	}
 
 	// ONLY FOR DEBUGGING AND USER FACING
-	std::string get_printed_rep() const {
+	std::string get_print() const {
 		if (face_down) return FACE_DOWN_STRING;
 		if (num == EMPTY_REP) return EMPTY_STRING;
 
-		return get_rank_print(get_rank()) + get_suit_print(get_suit());
+		return get_rank_print(rank()) + get_suit_print(suit());
 	}
 
 	public:
@@ -61,11 +61,11 @@ struct Card {
 	Card() {}
 	Card(size_t idx) : num{idx}, face_down{false} {}
 
-	size_t get_rank() const {
+	size_t rank() const {
 		return num % 13;
 	}
 
-	size_t get_suit() const {
+	size_t suit() const {
 		return num / 13;
 	}
 
@@ -81,7 +81,7 @@ struct Card {
 	}
 
 	friend std::ostream& operator<<(std::ostream& os, const Card& card) {
-		return os << card.get_printed_rep();
+		return os << card.get_print();
 	}
 };
 
@@ -145,8 +145,34 @@ std::ostream& operator<<(std::ostream& os, const std::array<T, N>& arr) {
 }
 
 struct Board {
+	private:
+	Card get_board_card(size_t idx) {
+		return main_board[idx / COLS][idx % COLS];
+	}
+
+	Card get_ace_card(size_t idx) {
+		return aces[idx];
+	}
+
+	Card get_deck_card(size_t idx) {
+		if (auto card = draw_pile.view_top_card()) {
+			return card.value();
+		}
+
+		return Card{};
+	}
+
+	Card get_flipped_card(size_t idx) {
+		if (!flipped.empty()) {
+			return flipped[flipped.size() - 1];
+		}
+
+		return Card{};
+	}
+
+	public:
 	static constexpr size_t COLS = 7;
-	static constexpr size_t ROWS = COLS + 13;
+	static constexpr size_t ROWS = COLS + 13 - 1;
 
 	std::array<std::array<Card, COLS>, ROWS> main_board{};
 	std::array<Card, 4> aces{};
@@ -157,7 +183,7 @@ struct Board {
 		draw_pile = deck.clone();
 		for (size_t row = 0; row < COLS; ++row) {
 			for (size_t col = row; col < COLS; ++col) {
-				if (auto card = deck.take_top_card()) {
+				if (auto card = draw_pile.take_top_card()) {
 					main_board[row][col] = card.value();
 					main_board[row][col].face_down = (row != col);
 				}
@@ -166,22 +192,29 @@ struct Board {
 	}
 
 	Card index(size_t idx) {
+		if (idx < COLS * ROWS) {
+			return get_board_card(idx);
+		}
+
+		idx -= COLS * ROWS;
+		if (idx < 4) {
+			return get_ace_card(idx);
+		}
+
+		idx -= 4;
+		if (idx == 0) {
+			return get_deck_card(idx);
+		}
+
+		return get_flipped_card(idx);
+	}
+
+	bool is_legal_move(size_t idx_a, size_t idx_b) {
 		// TODO
-		// if (idx < 7 * 18) {
-		// 	return get_board_card(idx);
-		// }
+	}
 
-		// idx -= (7 * 18);
-		// if (idx < 4) {
-		// 	return get_ace_card(idx);
-		// }
-
-		// idx -= 4;
-		// if (idx == 0) {
-		// 	return get_deck_card(idx);
-		// }
-
-		// return get_flipped_card(idx);
+	void perform_move(size_t idx_a, size_t idx_b) {
+		// TODO
 	}
 
 	friend std::ostream& operator<<(std::ostream& os, const Board& board) {
@@ -226,14 +259,10 @@ int main() {
 
 	std::cout << board << "\n";
 
-	// std::array<Card, 52> deck{};
-	// std::iota(deck.begin(), deck.end(), 1);
-
-	// std::cout << deck << "\n";
-
-	// std::shuffle(deck.begin(), deck.end(), g);
-
-	// std::cout << deck << "\n";
+	for (size_t i = 0; i < 7 * 19 + 6; ++i) {
+		std::cout << board.index(i) << ", ";
+	}
+	std::cout << "\n";
 
 	return 0;
 }
