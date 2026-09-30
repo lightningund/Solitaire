@@ -1,7 +1,7 @@
 // GOALS:
 // X Shuffle up a deck
 // X Deal it out
-// Display it in the terminal
+// X Display it in the terminal
 // Allow selecting an index and return the legal moves for it
 
 // NEAT algorithm
@@ -211,6 +211,85 @@ struct Board {
 
 	bool is_legal_move(size_t idx_a, size_t idx_b) {
 		// TODO
+		// Legal move types:
+			// 1) Opposing suit card on to next higher number:
+				// Conditions:
+					// Suit colors don't match
+					// Moving card has a rank one lower than the Destination card
+					// Moving card is face up
+					// Destination card doesn't have any other cards below it
+					// Destination card is face up
+				// Side effects:
+					// If the card behind the moving card is face down, flip it up
+					// If the moving card has other cards below it, move them too
+			// 2) King to empty column:
+				// Conditions:
+					// Moving card is a King
+					// Moving card is face up
+					// Destination column is empty
+				// Side effects:
+					// If the card behind the moving card is face down, flip it up
+					// If the moving card has other cards below it, move them too
+			// 3) Ace to empty Ace Slot:
+				// Conditions:
+					// Moving card is an Ace
+					// Moving card is face up
+					// Ace slot is empty
+				// Side effects:
+					// If the card behind the moving card is face down, flip it up
+			// 4) Card to Ace Slot:
+				// Conditions:
+					// Suits are the same
+					// Moving card has a rank one higher than the Destination card
+					// Moving card is face up
+					// Moving card has no other cards below it
+				// Side effects:
+					// If the card behind the moving card is face down, flip it up
+			// 5) Turn over card from deck:
+				// Conditions:
+					// There must be at least one card in the draw deck
+				// Side effects:
+					// N/A
+			// 6) Put flipped pile back into deck:
+				// Conditions:
+					// The draw deck must be empty
+					// There must be at least one card in the flipped pile
+				// Side effects:
+					// N/A
+
+		// Check order plan:
+			// First click on deck:
+				// Second idx doesn't matter
+				// Can only be 5) or 6)
+			// Otherwise:
+				// Instant DQs:
+					// Moving card is empty
+					// Moving card is face down
+					// Destination is deck
+					// Destination is flip pile
+				// If the destination is on the board:
+					// Instant DQs:
+						// Destination is not empty
+					// If moving card is a King:
+						// Instant DQs:
+							// Destination is not in the top row
+					// Otherwise:
+						// Instant DQs:
+							// Destination is in the top row
+							// Card one above the destination is empty
+							// Card one above the destination is not the opposite color suit
+							// The moving card is not one rank lower than the card one above the destination
+				// Otherwise (ace destination):
+					// Instant DQs:
+						// Moving card has cards under it
+					// If moving card is an ace:
+						// Instant DQs:
+							// Destination is not empty
+					// Otherwise:
+						// Instant DQs:
+							// Destination is empty
+							// The moving card is not one rank higher than the destination
+							// The moving card does not match the suit of the destination
 	}
 
 	void perform_move(size_t idx_a, size_t idx_b) {
@@ -261,6 +340,14 @@ int main() {
 
 	for (size_t i = 0; i < 7 * 19 + 6; ++i) {
 		std::cout << board.index(i) << ", ";
+	}
+	std::cout << "\n";
+
+	size_t idx;
+	std::cin >> idx;
+
+	for (size_t i = 0; i < 7 * 19 + 6; ++i) {
+		std::cout << board.is_legal_move(idx, i) << ", ";
 	}
 	std::cout << "\n";
 
