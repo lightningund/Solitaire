@@ -1,8 +1,13 @@
 // GOALS:
 // X Shuffle up a deck
-// Deal it out
+// X Deal it out
 // Display it in the terminal
 // Allow selecting an index and return the legal moves for it
+
+// NEAT algorithm
+// Connect it to solitaire
+// Save the progress over time for later viewing
+// Animate the AI playing solitaire
 
 // 7x19 for the main board
 // 4 aces
@@ -69,6 +74,10 @@ struct Card {
 		return flipped ? FLIPPED_REP : num;
 	}
 
+	Card operator=(const Card& src) {
+
+	}
+
 	friend std::ostream& operator<<(std::ostream& os, const Card& card) {
 		return os << card.get_printed_rep();
 	}
@@ -98,11 +107,27 @@ struct Deck {
 		return top_card;
 	}
 
+	std::optional<Card> view_top_card() const {
+		std::optional<Card> top_card{};
+		if (!cards.empty()) {
+			top_card = cards[cards.size() - 1];
+		}
+
+		return top_card;
+	}
+
 	Deck clone() const {
 		std::vector<Card> dest{};
 		dest.resize(cards.size());
 		std::copy(cards.begin(), cards.end(), dest.begin());
 		return dest;
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const Deck& deck) {
+		for (auto&& elem : deck.cards) {
+			os << elem << ", ";
+		}
+		return os;
 	}
 };
 
@@ -116,8 +141,9 @@ std::ostream& operator<<(std::ostream& os, const std::array<T, N>& arr) {
 
 struct Board {
 	static constexpr size_t COLS = 7;
+	static constexpr size_t ROWS = COLS + 13;
 
-	std::array<std::array<Card, 18>, COLS> main_board{};
+	std::array<std::array<Card, ROWS>, COLS> main_board{};
 	std::array<Card, 4> aces{};
 	Deck draw_pile{};
 	std::vector<Card> flipped{};
@@ -126,31 +152,57 @@ struct Board {
 		draw_pile = deck.clone();
 		for (size_t i = 0; i < COLS; ++i) {
 			for (size_t j = i; j < COLS; ++j) {
-				auto card = deck.take_top_card();
-				cols[j][i] = card;
-				if(i == j){
-					cols[i][j].flipped = true;
+				if (auto card = deck.take_top_card()) {
+					main_board[j][i] = card.value();
+					main_board[i][j].flipped = (i == j);
 				}
 			}
 		}
 	}
 
 	Card index(size_t idx) {
-		if (idx < 7 * 18) {
-			return get_board_card(idx);
+		// if (idx < 7 * 18) {
+		// 	return get_board_card(idx);
+		// }
+
+		// idx -= (7 * 18);
+		// if (idx < 4) {
+		// 	return get_ace_card(idx);
+		// }
+
+		// idx -= 4;
+		// if (idx == 0) {
+		// 	return get_deck_card(idx);
+		// }
+
+		// return get_flipped_card(idx);
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const Board& board) {
+		for (auto&& row : board.main_board) {
+			for (auto&& card : row) {
+				os << card << " ";
+			}
+
+			os << "\n";
 		}
 
-		idx -= (7 * 18);
-		if (idx < 4) {
-			return get_ace_card(idx);
+		for (auto&& card : board.aces) {
+			os << card << " ";
 		}
 
-		idx -= 4;
-		if (idx == 0) {
-			return get_deck_card(idx);
+		if (auto deck_top = board.draw_pile.view_top_card()) {
+			auto card = deck_top.value();
+			card.flipped = true;
+			os << card << " ";
 		}
 
-		return get_flipped_card(idx);
+		if (!board.flipped.empty()) {
+			auto card = board.flipped[board.flipped.size() - 1];
+			os << card << " ";
+		}
+
+		return os;
 	}
 };
 
