@@ -27,12 +27,12 @@ using CardRep = size_t;
 // 52 - empty
 // 53 - face down
 constexpr CardRep EMPTY_REP = 52;
-constexpr CardRep FLIPPED_REP = 53;
+constexpr CardRep FACE_DOWN_REP = 53;
 
 struct Card {
 	private:
-	const std::string EMPTY_STRING = "  ";
-	const std::string FLIPPED_STRING = "[]";
+	const std::string EMPTY_STRING = "__";
+	const std::string FACE_DOWN_STRING = "[]";
 
 	// ONLY FOR DEBUGGING AND USER FACING
 	static std::string get_rank_print(size_t rank) {
@@ -48,7 +48,7 @@ struct Card {
 
 	// ONLY FOR DEBUGGING AND USER FACING
 	std::string get_printed_rep() const {
-		if (flipped) return FLIPPED_STRING;
+		if (face_down) return FACE_DOWN_STRING;
 		if (num == EMPTY_REP) return EMPTY_STRING;
 
 		return get_rank_print(get_rank()) + get_suit_print(get_suit());
@@ -56,26 +56,28 @@ struct Card {
 
 	public:
 	CardRep num{EMPTY_REP};
-	bool flipped{false};
+	bool face_down{false};
 
 	Card() {}
-	Card(size_t idx) : num{idx}, flipped{false} {}
+	Card(size_t idx) : num{idx}, face_down{false} {}
 
 	size_t get_rank() const {
-
+		return num % 13;
 	}
 
 	size_t get_suit() const {
-
+		return num / 13;
 	}
 
 	// Get the number that represents the current state of the card
 	CardRep get_rep_num() const {
-		return flipped ? FLIPPED_REP : num;
+		return face_down ? FACE_DOWN_REP : num;
 	}
 
 	Card operator=(const Card& src) {
-
+		num = src.num;
+		face_down = src.face_down;
+		return *this;
 	}
 
 	friend std::ostream& operator<<(std::ostream& os, const Card& card) {
@@ -87,7 +89,8 @@ struct Deck {
 	std::vector<Card> cards{};
 
 	Deck() {
-
+		cards.resize(52);
+		std::iota(cards.begin(), cards.end(), 0);
 	}
 
 	Deck(std::vector<Card> src) : cards{src} {}
@@ -127,6 +130,7 @@ struct Deck {
 		for (auto&& elem : deck.cards) {
 			os << elem << ", ";
 		}
+
 		return os;
 	}
 };
@@ -136,6 +140,7 @@ std::ostream& operator<<(std::ostream& os, const std::array<T, N>& arr) {
 	for (auto&& elem : arr) {
 		os << elem << ", ";
 	}
+
 	return os;
 }
 
@@ -143,24 +148,25 @@ struct Board {
 	static constexpr size_t COLS = 7;
 	static constexpr size_t ROWS = COLS + 13;
 
-	std::array<std::array<Card, ROWS>, COLS> main_board{};
+	std::array<std::array<Card, COLS>, ROWS> main_board{};
 	std::array<Card, 4> aces{};
 	Deck draw_pile{};
 	std::vector<Card> flipped{};
 
 	void deal(Deck& deck) {
 		draw_pile = deck.clone();
-		for (size_t i = 0; i < COLS; ++i) {
-			for (size_t j = i; j < COLS; ++j) {
+		for (size_t row = 0; row < COLS; ++row) {
+			for (size_t col = row; col < COLS; ++col) {
 				if (auto card = deck.take_top_card()) {
-					main_board[j][i] = card.value();
-					main_board[i][j].flipped = (i == j);
+					main_board[row][col] = card.value();
+					main_board[row][col].face_down = (row != col);
 				}
 			}
 		}
 	}
 
 	Card index(size_t idx) {
+		// TODO
 		// if (idx < 7 * 18) {
 		// 	return get_board_card(idx);
 		// }
@@ -193,7 +199,7 @@ struct Board {
 
 		if (auto deck_top = board.draw_pile.view_top_card()) {
 			auto card = deck_top.value();
-			card.flipped = true;
+			card.face_down = true;
 			os << card << " ";
 		}
 
@@ -210,14 +216,24 @@ int main() {
 	std::random_device rd;
 	std::mt19937 g(rd());
 
-	std::array<Card, 52> deck{};
-	std::iota(deck.begin(), deck.end(), 1);
+	Deck deck{};
+	deck.shuffle(g);
 
 	std::cout << deck << "\n";
 
-	std::shuffle(deck.begin(), deck.end(), g);
+	Board board{};
+	board.deal(deck);
 
-	std::cout << deck << "\n";
+	std::cout << board << "\n";
+
+	// std::array<Card, 52> deck{};
+	// std::iota(deck.begin(), deck.end(), 1);
+
+	// std::cout << deck << "\n";
+
+	// std::shuffle(deck.begin(), deck.end(), g);
+
+	// std::cout << deck << "\n";
 
 	return 0;
 }
