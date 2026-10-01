@@ -435,11 +435,20 @@ int main() {
 	}
 	std::cout << "\n";
 
-	size_t idx;
-	std::cin >> idx;
+	size_t idx_a;
+	std::cin >> idx_a;
+
+	std::cout << idx_a << ", " << board.index(idx_a) << "\n";
+
+	size_t idx_b;
+	std::cin >> idx_b;
+
+	std::cout << idx_b << ", " << board.index(idx_b) << "\n";
+
+	std::cout << board.is_legal_move(idx_a, idx_b) << "\n";
 
 	for (size_t i = 0; i < 7 * 19 + 6; ++i) {
-		std::cout << board.is_legal_move(idx, i) << ", ";
+		std::cout << board.is_legal_move(idx_a, i) << ", ";
 	}
 	std::cout << "\n";
 
