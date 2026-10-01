@@ -74,6 +74,10 @@ struct Card {
 		return face_down ? FACE_DOWN_REP : num;
 	}
 
+	bool empty() const {
+		return num == EMPTY_REP;
+	}
+
 	Card operator=(const Card& src) {
 		num = src.num;
 		face_down = src.face_down;
@@ -290,6 +294,58 @@ struct Board {
 							// The moving card is not one rank higher than the destination
 							// The moving card does not match the suit of the destination
 
+		// Check if the deck can be used, either drawing or reshuffling
+		const auto can_click_deck = [this]() { return !(draw_pile.cards.empty() && flipped.empty()); };
+
+		/// Properties of an index itself
+		// Checks if the index is the draw pile
+		const auto is_deck = [](size_t idx) { return idx == (COLS * ROWS + 4); };
+		// Checks if the index is the flip pile
+		const auto is_flip_pile = [](size_t idx) { return idx == (COLS * ROWS + 5); };
+		// Checks if the index is in the main board of cards
+		const auto is_board = [](size_t idx) { return idx < (COLS * ROWS); };
+		// Checks if the index is in the top row of the board
+		const auto is_top_row = [](size_t idx) { return idx < COLS; };
+		// Checks if the index is in the bottom row of the board
+		const auto is_bottom_row = [](size_t idx) { return idx > (COLS * (ROWS - 1)) && idx < (COLS * ROWS); };
+
+		/// Index modifying functions
+		// Get the index of the card one above this one
+		// Returns the same index if it's in the top row
+		// UB if you call it with an index outside of the board
+		const auto one_above = [&](size_t idx) {
+			if (is_top_row(idx)) return idx;
+			return idx - COLS;
+		};
+		// Get the index of the card one below this one
+		// Returns the same index if it's in the bottom row
+		// UB if you call it with an index outside of the board
+		const auto one_below = [&](size_t idx) {
+			if (is_bottom_row(idx)) return idx;
+			return idx + COLS;
+		};
+
+		/// Properties of the card at an index
+		// Check if the card at an index is empty
+		const auto is_empty = [this](size_t idx) { return index(idx).empty(); };
+		// Check if the card at an index is face down
+		const auto is_face_down = [this](size_t idx) { return index(idx).face_down; };
+		// Check if the card at an index is a king
+		const auto is_king = [this](size_t idx) { return index(idx).rank() == 12; };
+		// Check if the card at an index is an ace
+		const auto is_ace = [this](size_t idx) { return index(idx).rank() == 0; };
+		// Get the rank of a card at an index
+		const auto get_rank = [this](size_t idx) { return index(idx).rank(); };
+		// Get the suit of a card at an index
+		const auto get_suit = [this](size_t idx) { return index(idx).suit(); };
+
+		// Check if two cards are suits of the same color
+		const auto is_same_color = [this](size_t idx_a, size_t idx_b) {
+			// We divide by two since the suits are laid out like Heart Diamond Club Spade
+			// So the two pairs are next to each other and we can just divide and see if they are in the same "group"
+			return (index(idx_a).suit() / 2) == (index(idx_b).suit() / 2);
+		};
+
 		if (is_deck(idx_a)) {
 			return can_click_deck();
 		} else {
@@ -311,7 +367,7 @@ struct Board {
 					return true;
 				}
 			} else {
-				if (!is_bottom(idx_a) && !is_empty(one_below(idx_a))) return false;
+				if (!is_bottom_row(idx_a) && !is_empty(one_below(idx_a))) return false;
 
 				if (is_ace(idx_a)) {
 					if (!is_empty(idx_b)) return false;
