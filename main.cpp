@@ -210,7 +210,6 @@ struct Board {
 	}
 
 	bool is_legal_move(size_t idx_a, size_t idx_b) {
-		// TODO
 		// Legal move types:
 			// 1) Opposing suit card on to next higher number:
 				// Conditions:
@@ -277,8 +276,8 @@ struct Board {
 						// Instant DQs:
 							// Destination is in the top row
 							// Card one above the destination is empty
-							// Card one above the destination is not the opposite color suit
-							// The moving card is not one rank lower than the card one above the destination
+							// Card one above the destination is not the opposite color suit of the moving card
+							// Card one above the destination is not one rank higher than the moving card
 				// Otherwise (ace destination):
 					// Instant DQs:
 						// Moving card has cards under it
@@ -290,6 +289,43 @@ struct Board {
 							// Destination is empty
 							// The moving card is not one rank higher than the destination
 							// The moving card does not match the suit of the destination
+
+		if (is_deck(idx_a)) {
+			return can_click_deck();
+		} else {
+			if (is_empty(idx_a)) return false;
+			if (is_face_down(idx_a)) return false;
+			if (is_deck(idx_b)) return false;
+			if (is_flip_pile(idx_b)) return false;
+
+			if (is_board(idx_b)) {
+				if (!is_empty(idx_b)) return false;
+				if (is_king(idx_a)) {
+					return is_top_row(idx_b);
+				} else {
+					if (is_top_row(idx_b)) return false;
+					if (is_empty(one_above(idx_b))) return false;
+					if (is_same_color(idx_a, one_above(idx_b))) return false;
+					if (get_rank(idx_a) + 1 != get_rank(one_above(idx_b))) return false;
+
+					return true;
+				}
+			} else {
+				if (!is_bottom(idx_a) && !is_empty(one_below(idx_a))) return false;
+
+				if (is_ace(idx_a)) {
+					if (!is_empty(idx_b)) return false;
+
+					return true;
+				} else {
+					if (is_empty(idx_b)) return false;
+					if (get_rank(idx_a) != get_rank(idx_b) + 1) return false;
+					if (get_suit(idx_a) != get_suit(idx_b)) return false;
+
+					return true;
+				}
+			}
+		}
 	}
 
 	void perform_move(size_t idx_a, size_t idx_b) {
