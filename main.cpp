@@ -195,7 +195,10 @@ struct Board {
 		if (auto card = draw_pile.take_top_card()) {
 			flipped.push_back(card.value());
 		} else {
-			draw_pile.cards = flipped;
+			for (auto card : flipped) {
+				if (card.empty()) continue;
+				draw_pile.cards.push_back(card);
+			}
 			flipped.clear();
 		}
 	}
@@ -208,9 +211,15 @@ struct Board {
 		idx -= COLS * ROWS;
 		if (idx < 4) {
 			aces[idx].pop_back();
+			if (aces[idx].empty()) {
+				aces[idx].push_back(EMPTY_CARD);
+			}
+		} else {
+			flipped.pop_back();
+			if (flipped.empty()) {
+				flipped.push_back(EMPTY_CARD);
+			}
 		}
-
-		flipped.pop_back();
 	}
 
 	void move_card(size_t src, size_t dst) {
@@ -221,6 +230,7 @@ struct Board {
 	public:
 	static constexpr size_t COLS = 7;
 	static constexpr size_t ROWS = COLS + 13 - 1;
+	static constexpr size_t DECK_IDX = ROWS * COLS + 5;
 
 	std::array<std::array<Card, COLS>, ROWS> main_board{};
 	std::array<std::vector<Card>, 4> aces = {std::vector<Card>{EMPTY_CARD}, {EMPTY_CARD}, {EMPTY_CARD}, {EMPTY_CARD}};
@@ -251,10 +261,10 @@ struct Board {
 
 		idx -= 4;
 		if (idx == 0) {
-			return get_deck_card();
+			return get_flipped_card();
 		}
 
-		return get_flipped_card();
+		return get_deck_card();
 	}
 
 	Card& index(size_t idx) {
@@ -269,10 +279,10 @@ struct Board {
 
 		idx -= 4;
 		if (idx == 0) {
-			return get_deck_card();
+			return get_flipped_card();
 		}
 
-		return get_flipped_card();
+		return get_deck_card();
 	}
 
 	// God this is just begging to have actual testing
@@ -365,9 +375,9 @@ struct Board {
 
 		/// Properties of an index itself
 		// Checks if the index is the draw pile
-		const auto is_deck = [](size_t idx) { return idx == (COLS * ROWS + 4); };
+		const auto is_deck = [](size_t idx) { return idx == (COLS * ROWS + 5); };
 		// Checks if the index is the flip pile
-		const auto is_flip_pile = [](size_t idx) { return idx == (COLS * ROWS + 5); };
+		const auto is_flip_pile = [](size_t idx) { return idx == (COLS * ROWS + 4); };
 		// Checks if the index is in the main board of cards
 		const auto is_board = [](size_t idx) { return idx < (COLS * ROWS); };
 		// Checks if the index is in the top row of the board
@@ -423,7 +433,13 @@ struct Board {
 			if (is_board(idx_b)) {
 				if (!is_empty(idx_b)) return false;
 				if (is_king(idx_a)) {
-					return is_top_row(idx_b);
+					if (!is_top_row(idx_b)) return false;
+					// ADDITIONAL STIPULATION:
+					// If the king is already on the top, also illegal
+					// This prevents the AI from moving it back and forth forever
+					if (is_top_row(idx_a)) return false;
+
+					return true;
 				} else {
 					if (is_top_row(idx_b)) return false;
 					if (is_empty(one_above(idx_b))) return false;
@@ -493,9 +509,9 @@ struct Board {
 
 		/// Properties of an index itself
 		// Checks if the index is the draw pile
-		const auto is_deck = [](size_t idx) { return idx == (COLS * ROWS + 4); };
+		const auto is_deck = [](size_t idx) { return idx == (COLS * ROWS + 5); };
 		// Checks if the index is the flip pile
-		const auto is_flip_pile = [](size_t idx) { return idx == (COLS * ROWS + 5); };
+		const auto is_flip_pile = [](size_t idx) { return idx == (COLS * ROWS + 4); };
 		// Checks if the index is one of the four ace slots
 		const auto is_ace_slot = [](size_t idx) { return idx > (COLS * ROWS) && idx < (COLS * ROWS + 4); };
 		// Checks if the index is in the main board of cards
@@ -562,6 +578,9 @@ struct Board {
 					while (!is_bottom_row(temp_a)) {
 						temp_a = one_below(temp_a);
 						temp_b = one_below(temp_b);
+
+						if (is_empty(temp_a)) break;
+
 						move_card(temp_a, temp_b);
 					}
 				}
@@ -582,14 +601,14 @@ struct Board {
 			os << card.back() << " ";
 		}
 
-		if (auto deck_top = board.draw_pile.view_top_card()) {
-			auto card = deck_top.value();
-			card.face_down = true;
+		if (!board.flipped.empty()) {
+			auto card = board.flipped[board.flipped.size() - 1];
 			os << card << " ";
 		}
 
-		if (!board.flipped.empty()) {
-			auto card = board.flipped[board.flipped.size() - 1];
+		if (auto deck_top = board.draw_pile.view_top_card()) {
+			auto card = deck_top.value();
+			card.face_down = true;
 			os << card << " ";
 		}
 
@@ -604,33 +623,57 @@ int main() {
 	Deck deck{};
 	deck.shuffle(g);
 
-	std::cout << deck << "\n";
-
 	Board board{};
 	board.deal(deck);
 
 	std::cout << board << "\n";
 
-	size_t idx_a;
-	std::cin >> idx_a;
+	// Exclude the deck
+	std::uniform_int_distribution<> idx_distrib{0, (Board::COLS * Board::ROWS + 4)};
 
-	std::cout << idx_a << ", " << board.index(idx_a) << "\n";
+	for (int i = 0; i < 1000; ++i) {
+		size_t tries = 0;
+		size_t idx_a = 0;
+		size_t idx_b = 0;
+		while (!board.is_legal_move(idx_a, idx_b)) {
+			idx_a = idx_distrib(g);
+			idx_b = idx_distrib(g);
+			++tries;
 
-	size_t idx_b;
-	std::cin >> idx_b;
+			std::cout << tries << "\r";
 
-	std::cout << idx_b << ", " << board.index(idx_b) << "\n";
+			// Failsafe for if we don't have any legal moves
+			if (tries > 50000) {
+				idx_a = Board::DECK_IDX;
+				break;
+			}
+		}
 
-	std::cout << board.is_legal_move(idx_a, idx_b) << "\n";
+		// If we tripped the failsafe but can't draw just give up
+		if (!board.is_legal_move(idx_a, idx_b)) {
+			break;
+		}
 
-	for (size_t i = 0; i < 7 * 19 + 6; ++i) {
-		std::cout << board.is_legal_move(idx_a, i) << ", ";
+		std::cout << "Tries: " << tries << ", indices: " << idx_a << ", " << idx_b << "\n";
+		board.perform_move(idx_a, idx_b);
+		std::cout << board << "\n";
 	}
-	std::cout << "\n";
 
-	board.perform_move(idx_a, idx_b);
+	// size_t idx_a;
+	// std::cin >> idx_a;
 
-	std::cout << board << "\n";
+	// std::cout << idx_a << ", " << board.index(idx_a) << "\n";
+
+	// size_t idx_b;
+	// std::cin >> idx_b;
+
+	// std::cout << idx_b << ", " << board.index(idx_b) << "\n";
+
+	// std::cout << board.is_legal_move(idx_a, idx_b) << "\n";
+
+	// board.perform_move(idx_a, idx_b);
+
+	// std::cout << board << "\n";
 
 	return 0;
 }
