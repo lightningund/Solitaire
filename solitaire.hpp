@@ -1,9 +1,8 @@
-
 #include <iostream>
 #include <array>
 #include <vector>
 #include <optional>
-#include <cassert>
+#include <algorithm>
 
 using CardRep = size_t;
 
@@ -63,7 +62,9 @@ struct Deck {
 	Deck(std::vector<Card> src) : cards{src} {}
 
 	template <typename RandomGen>
-	void shuffle(RandomGen& gen);
+	void shuffle(RandomGen& gen) {
+		std::shuffle(cards.begin(), cards.end(), gen);
+	}
 
 	std::optional<Card> take_top_card();
 

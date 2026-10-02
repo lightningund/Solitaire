@@ -1,11 +1,8 @@
-
-#include <iostream>
 #include <array>
 #include <vector>
 #include <algorithm>
 #include <numeric>
 #include <optional>
-#include <cassert>
 
 #include "solitaire.hpp"
 
@@ -43,11 +40,6 @@ Card Card::operator=(const Card& src) {
 Deck::Deck() {
 	cards.resize(52);
 	std::iota(cards.begin(), cards.end(), 0);
-}
-
-template <typename RandomGen>
-void Deck::shuffle(RandomGen& gen) {
-	std::shuffle(cards.begin(), cards.end(), gen);
 }
 
 std::optional<Card> Deck::take_top_card() {
