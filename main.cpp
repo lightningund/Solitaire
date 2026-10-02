@@ -2,7 +2,9 @@
 // X Shuffle up a deck
 // X Deal it out
 // X Display it in the terminal
-// Allow selecting an index and return the legal moves for it
+// X Allow selecting an index and return the legal moves for it
+// X Move performing
+// Win checking
 
 // NEAT algorithm
 // Connect it to solitaire
@@ -20,6 +22,7 @@
 #include <algorithm>
 #include <random>
 #include <optional>
+#include <cassert>
 
 using CardRep = size_t;
 
@@ -150,28 +153,69 @@ std::ostream& operator<<(std::ostream& os, const std::array<T, N>& arr) {
 
 struct Board {
 	private:
-	Card get_board_card(size_t idx) {
+	const Card EMPTY_CARD{};
+
+	Card get_board_card(size_t idx) const {
+		return main_board[idx / COLS][idx % COLS];
+	}
+	Card& get_board_card(size_t idx) {
 		return main_board[idx / COLS][idx % COLS];
 	}
 
-	Card get_ace_card(size_t idx) {
-		return aces[idx];
+	Card get_ace_card(size_t idx) const {
+		return aces[idx].back();
+	}
+	Card& get_ace_card(size_t idx) {
+		return aces[idx].back();
 	}
 
-	Card get_deck_card(size_t idx) {
+	Card get_deck_card() const {
 		if (auto card = draw_pile.view_top_card()) {
 			return card.value();
 		}
 
-		return Card{};
+		return EMPTY_CARD;
+	}
+	Card& get_deck_card() {
+		return draw_pile.cards.back();
 	}
 
-	Card get_flipped_card(size_t idx) {
+	Card get_flipped_card() const {
 		if (!flipped.empty()) {
-			return flipped[flipped.size() - 1];
+			return flipped.back();
 		}
 
-		return Card{};
+		return EMPTY_CARD;
+	}
+	Card& get_flipped_card() {
+		return flipped.back();
+	}
+
+	void draw_from_deck() {
+		if (auto card = draw_pile.take_top_card()) {
+			flipped.push_back(card.value());
+		} else {
+			draw_pile.cards = flipped;
+			flipped.clear();
+		}
+	}
+
+	void flip_card(size_t idx) {
+		index(idx).face_down = false;
+	}
+
+	void pop_card(size_t idx) {
+		idx -= COLS * ROWS;
+		if (idx < 4) {
+			aces[idx].pop_back();
+		}
+
+		flipped.pop_back();
+	}
+
+	void move_card(size_t src, size_t dst) {
+		index(dst) = index(src);
+		index(src) = EMPTY_CARD;
 	}
 
 	public:
@@ -179,7 +223,7 @@ struct Board {
 	static constexpr size_t ROWS = COLS + 13 - 1;
 
 	std::array<std::array<Card, COLS>, ROWS> main_board{};
-	std::array<Card, 4> aces{};
+	std::array<std::vector<Card>, 4> aces = {std::vector<Card>{EMPTY_CARD}, {EMPTY_CARD}, {EMPTY_CARD}, {EMPTY_CARD}};
 	Deck draw_pile{};
 	std::vector<Card> flipped{};
 
@@ -195,7 +239,7 @@ struct Board {
 		}
 	}
 
-	Card index(size_t idx) {
+	Card index(size_t idx) const {
 		if (idx < COLS * ROWS) {
 			return get_board_card(idx);
 		}
@@ -207,13 +251,35 @@ struct Board {
 
 		idx -= 4;
 		if (idx == 0) {
-			return get_deck_card(idx);
+			return get_deck_card();
 		}
 
-		return get_flipped_card(idx);
+		return get_flipped_card();
 	}
 
-	bool is_legal_move(size_t idx_a, size_t idx_b) {
+	Card& index(size_t idx) {
+		if (idx < COLS * ROWS) {
+			return get_board_card(idx);
+		}
+
+		idx -= COLS * ROWS;
+		if (idx < 4) {
+			return get_ace_card(idx);
+		}
+
+		idx -= 4;
+		if (idx == 0) {
+			return get_deck_card();
+		}
+
+		return get_flipped_card();
+	}
+
+	// God this is just begging to have actual testing
+	// Test all the internal sub-functions with toy setups
+	// Test a whole bunch of premade boards to ensure that the set of legal moves are correct
+	// I miss rust's testing suite
+	bool is_legal_move(size_t idx_a, size_t idx_b) const {
 		// Legal move types:
 			// 1) Opposing suit card on to next higher number:
 				// Conditions:
@@ -385,7 +451,122 @@ struct Board {
 	}
 
 	void perform_move(size_t idx_a, size_t idx_b) {
-		// TODO
+		// Legal move types:
+			// 1) Opposing suit card on to next higher number:
+				// Effects:
+					// The moving card goes to the indicated slot
+					// If the card behind the moving card is face down, flip it up
+					// If the moving card has other cards below it, move them too
+			// 2) King to empty column:
+				// Effects:
+					// The moving card goes to the indicated slot
+					// If the card behind the moving card is face down, flip it up
+					// If the moving card has other cards below it, move them too
+			// 3) Ace to empty Ace Slot:
+				// Effects:
+					// The moving card goes to the indicated slot
+					// If the card behind the moving card is face down, flip it up
+			// 4) Card to Ace Slot:
+				// Effects:
+					// The moving card goes to the indicated slot
+					// If the card behind the moving card is face down, flip it up
+			// 5) Turn over card from deck:
+				// Effects:
+					// The top card of the draw pile is put into the flip pile
+			// 6) Put flipped pile back into deck:
+				// Effects:
+					// The entire flip pile is put back into the draw pile
+
+		// Check Plan:
+			// If the source is the deck
+				// Either draw or reset it
+			// Move the card to the destination
+			// If the source was an ace or the flip pile
+				// Pop it off the end
+			// If the source was on the board
+				// Check if there is a card behind to flip
+				// If the destination was also on the board
+					// Move any cards below
+
+		// Check if the deck can be used, either drawing or reshuffling
+		const auto can_click_deck = [this]() { return !(draw_pile.cards.empty() && flipped.empty()); };
+
+		/// Properties of an index itself
+		// Checks if the index is the draw pile
+		const auto is_deck = [](size_t idx) { return idx == (COLS * ROWS + 4); };
+		// Checks if the index is the flip pile
+		const auto is_flip_pile = [](size_t idx) { return idx == (COLS * ROWS + 5); };
+		// Checks if the index is one of the four ace slots
+		const auto is_ace_slot = [](size_t idx) { return idx > (COLS * ROWS) && idx < (COLS * ROWS + 4); };
+		// Checks if the index is in the main board of cards
+		const auto is_board = [](size_t idx) { return idx < (COLS * ROWS); };
+		// Checks if the index is in the top row of the board
+		const auto is_top_row = [](size_t idx) { return idx < COLS; };
+		// Checks if the index is in the bottom row of the board
+		const auto is_bottom_row = [](size_t idx) { return idx > (COLS * (ROWS - 1)) && idx < (COLS * ROWS); };
+
+		/// Index modifying functions
+		// Get the index of the card one above this one
+		// Returns the same index if it's in the top row
+		// UB if you call it with an index outside of the board
+		const auto one_above = [&](size_t idx) {
+			if (is_top_row(idx)) return idx;
+			return idx - COLS;
+		};
+		// Get the index of the card one below this one
+		// Returns the same index if it's in the bottom row
+		// UB if you call it with an index outside of the board
+		const auto one_below = [&](size_t idx) {
+			if (is_bottom_row(idx)) return idx;
+			return idx + COLS;
+		};
+
+		/// Properties of the card at an index
+		// Check if the card at an index is empty
+		const auto is_empty = [this](size_t idx) { return index(idx).empty(); };
+		// Check if the card at an index is face down
+		const auto is_face_down = [this](size_t idx) { return index(idx).face_down; };
+		// Check if the card at an index is a king
+		const auto is_king = [this](size_t idx) { return index(idx).rank() == 12; };
+		// Check if the card at an index is an ace
+		const auto is_ace = [this](size_t idx) { return index(idx).rank() == 0; };
+		// Get the rank of a card at an index
+		const auto get_rank = [this](size_t idx) { return index(idx).rank(); };
+		// Get the suit of a card at an index
+		const auto get_suit = [this](size_t idx) { return index(idx).suit(); };
+
+		// Check if two cards are suits of the same color
+		const auto is_same_color = [this](size_t idx_a, size_t idx_b) {
+			// We divide by two since the suits are laid out like Heart Diamond Club Spade
+			// So the two pairs are next to each other and we can just divide and see if they are in the same "group"
+			return (index(idx_a).suit() / 2) == (index(idx_b).suit() / 2);
+		};
+
+		if (!is_legal_move(idx_a, idx_b)) return;
+
+		if (is_deck(idx_a)) {
+			draw_from_deck();
+		} else {
+			move_card(idx_a, idx_b);
+
+			if (is_ace_slot(idx_a) || is_flip_pile(idx_a)) {
+				pop_card(idx_a);
+			} else if (is_board(idx_a)) {
+				if (!is_top_row(idx_a) && is_face_down(one_above(idx_a))) {
+					flip_card(one_above(idx_a));
+				}
+
+				if (is_board(idx_b)) {
+					auto temp_a = idx_a;
+					auto temp_b = idx_b;
+					while (!is_bottom_row(temp_a)) {
+						temp_a = one_below(temp_a);
+						temp_b = one_below(temp_b);
+						move_card(temp_a, temp_b);
+					}
+				}
+			}
+		}
 	}
 
 	friend std::ostream& operator<<(std::ostream& os, const Board& board) {
@@ -398,7 +579,7 @@ struct Board {
 		}
 
 		for (auto&& card : board.aces) {
-			os << card << " ";
+			os << card.back() << " ";
 		}
 
 		if (auto deck_top = board.draw_pile.view_top_card()) {
@@ -430,11 +611,6 @@ int main() {
 
 	std::cout << board << "\n";
 
-	for (size_t i = 0; i < 7 * 19 + 6; ++i) {
-		std::cout << board.index(i) << ", ";
-	}
-	std::cout << "\n";
-
 	size_t idx_a;
 	std::cin >> idx_a;
 
@@ -451,6 +627,10 @@ int main() {
 		std::cout << board.is_legal_move(idx_a, i) << ", ";
 	}
 	std::cout << "\n";
+
+	board.perform_move(idx_a, idx_b);
+
+	std::cout << board << "\n";
 
 	return 0;
 }
