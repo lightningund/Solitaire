@@ -281,6 +281,8 @@ bool Board::is_legal_move(size_t idx_a, size_t idx_b) const {
 	const auto is_deck = [](size_t idx) { return idx == (COLS * ROWS + 5); };
 	// Checks if the index is the flip pile
 	const auto is_flip_pile = [](size_t idx) { return idx == (COLS * ROWS + 4); };
+	// Checks if the index is one of the four ace slots
+	const auto is_ace_slot = [](size_t idx) { return idx >= (COLS * ROWS) && idx < (COLS * ROWS + 4); };
 	// Checks if the index is in the main board of cards
 	const auto is_board = [](size_t idx) { return idx < (COLS * ROWS); };
 	// Checks if the index is in the top row of the board
@@ -352,13 +354,15 @@ bool Board::is_legal_move(size_t idx_a, size_t idx_b) const {
 				// ADDITIONAL STIPULATION:
 				// If the moving card already had a match behind it,
 				//	only allow it if the card behind the moving card has a matching ace
+				//	that is also one rank below
 				// This prevents the AI from just shuffling them back and forth
 				// But still allows shifting them around when you need to get to the ace
 				if (get_rank(idx_a) + 1 == get_rank(one_above(idx_a))) {
 					auto target_suit = get_suit(one_above(idx_a));
+					auto target_rank = get_rank(one_above(idx_a)) - 1;
 					bool ace_match = false;
 					for (size_t i = 0; i < 4; ++i) {
-						if (get_suit(i + (COLS * ROWS)) == target_suit) {
+						if (get_suit(i + (COLS * ROWS)) == target_suit && get_rank(i + (COLS * ROWS)) == target_rank) {
 							ace_match = true;
 							break;
 						}
@@ -370,7 +374,10 @@ bool Board::is_legal_move(size_t idx_a, size_t idx_b) const {
 				return true;
 			}
 		} else {
-			if (!is_bottom_row(idx_a) && !is_empty(one_below(idx_a))) return false;
+			// ADDITIONAL STIPULATION:
+			// Prevent moving an ace between slots
+			if (is_ace_slot(idx_a)) return false;
+			if (is_board(idx_a) && !is_bottom_row(idx_a) && !is_empty(one_below(idx_a))) return false;
 
 			if (is_ace(idx_a)) {
 				if (!is_empty(idx_b)) return false;
@@ -434,7 +441,7 @@ void Board::perform_move(size_t idx_a, size_t idx_b) {
 	// Checks if the index is the flip pile
 	const auto is_flip_pile = [](size_t idx) { return idx == (COLS * ROWS + 4); };
 	// Checks if the index is one of the four ace slots
-	const auto is_ace_slot = [](size_t idx) { return idx > (COLS * ROWS) && idx < (COLS * ROWS + 4); };
+	const auto is_ace_slot = [](size_t idx) { return idx >= (COLS * ROWS) && idx < (COLS * ROWS + 4); };
 	// Checks if the index is in the main board of cards
 	const auto is_board = [](size_t idx) { return idx < (COLS * ROWS); };
 	// Checks if the index is in the top row of the board
