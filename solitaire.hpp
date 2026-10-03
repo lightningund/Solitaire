@@ -112,8 +112,8 @@ struct Board {
 	Card get_deck_card() const;
 	Card& get_deck_card();
 
-	Card get_flipped_card() const;
-	Card& get_flipped_card();
+	Card get_flip_card() const;
+	Card& get_flip_card();
 
 	void draw_from_deck();
 
@@ -130,6 +130,8 @@ struct Board {
 	static constexpr size_t FLIP_IDX = DECK_IDX + 1;
 	static constexpr size_t ACE_IDX = FLIP_IDX + 1;
 	static constexpr size_t BOARD_IDX = ACE_IDX + 4;
+	// Outside the bounds, the last real index is this -1
+	static constexpr size_t END_IDX = BOARD_IDX + ROWS * COLS;
 
 	std::array<std::array<Card, COLS>, ROWS> main_board{};
 	std::array<std::vector<Card>, 4> aces = {std::vector<Card>{EMPTY_CARD}, {EMPTY_CARD}, {EMPTY_CARD}, {EMPTY_CARD}};

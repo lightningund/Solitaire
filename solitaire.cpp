@@ -93,14 +93,14 @@ Card& Board::get_deck_card() {
 	return draw_pile.cards.back();
 }
 
-Card Board::get_flipped_card() const {
+Card Board::get_flip_card() const {
 	if (!flipped.empty()) {
 		return flipped.back();
 	}
 
 	return EMPTY_CARD;
 }
-Card& Board::get_flipped_card() {
+Card& Board::get_flip_card() {
 	return flipped.back();
 }
 
@@ -121,16 +121,16 @@ void Board::flip_card(size_t idx) {
 }
 
 void Board::pop_card(size_t idx) {
-	idx -= COLS * ROWS;
-	if (idx < 4) {
-		aces[idx].pop_back();
-		if (aces[idx].empty()) {
-			aces[idx].push_back(EMPTY_CARD);
-		}
-	} else {
+	if (idx == FLIP_IDX) {
 		flipped.pop_back();
 		if (flipped.empty()) {
 			flipped.push_back(EMPTY_CARD);
+		}
+	} else {
+		idx -= ACE_IDX;
+		aces[idx].pop_back();
+		if (aces[idx].empty()) {
+			aces[idx].push_back(EMPTY_CARD);
 		}
 	}
 }
@@ -281,7 +281,7 @@ bool Board::is_legal_move(size_t idx_a, size_t idx_b) const {
 	const auto is_board = [](size_t idx) { return idx >= BOARD_IDX; };
 	// Checks if the index is in the top row of the board
 	// Meaningless if idx is not on the board
-	const auto is_top_row = [](size_t idx) { return (idx - BOARD_IDX) < COLS; };
+	const auto is_top_row = [](size_t idx) { return idx < COLS + BOARD_IDX; };
 	// Checks if the index is in the bottom row of the board
 	const auto is_bottom_row = [](size_t idx) { return idx > (COLS * (ROWS - 1) + BOARD_IDX); };
 
@@ -301,7 +301,7 @@ bool Board::is_legal_move(size_t idx_a, size_t idx_b) const {
 		return idx + COLS;
 	};
 	// Get the index of the nth ace
-	const auto get_ace = [](size_t n) { return ACE_IDX + n; }
+	const auto get_ace = [](size_t n) { return ACE_IDX + n; };
 
 	/// Properties of the card at an index
 	// Check if the card at an index is empty
