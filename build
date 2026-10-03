@@ -1,1 +1,1 @@
-g++ solitaire.cpp main.cpp -std=c++23
+g++ -g -O0 solitaire.cpp main.cpp -std=c++23

@@ -20,8 +20,77 @@
 
 #include <iostream>
 #include <random>
+#include <span>
 
 #include "solitaire.hpp"
+
+struct Node;
+
+struct Connection {
+	double weight;
+	// The one whose value we source from
+	Node* backtarget;
+};
+
+struct Node {
+	std::vector<Connection> cons;
+	double bias;
+	double value;
+	bool propagated{false};
+
+	friend std::ostream& operator<<(std::ostream& os, const Node& node) {
+		return os << node.value;
+	}
+};
+
+template <size_t num_input, size_t num_output>
+struct Robot {
+	std::array<Node, num_input> inputs{};
+	std::array<Node, num_output> outputs{};
+	std::vector<Node> nodes{};
+
+	template <typename RNG>
+	Robot(RNG& gen) {
+		std::uniform_real_distribution<> prob_dist{0, 1};
+		std::uniform_real_distribution<> weight_dist{-5, 5};
+		for (auto& outnode : outputs) {
+			for (auto& innode : inputs) {
+				if (prob_dist(gen) > 0.5) {
+					outnode.cons.push_back(Connection {
+						weight_dist(gen),
+						&innode
+					});
+				}
+			}
+		}
+	}
+
+	void set_inputs(std::span<double> vals) {
+		for (int i = 0; i < num_input; ++i) {
+			inputs[i].value = vals[i];
+			inputs[i].propagated = true;
+		}
+	}
+
+	static void backprop(Node* n) {
+		n->value = n->bias;
+		for (auto& con : n->cons) {
+			if (!con.backtarget->propagated) {
+				backprop(con.backtarget);
+			}
+
+			n->value += con.backtarget->value * con.weight;
+		}
+
+		n->propagated = true;
+	}
+
+	void backprop() {
+		for (auto& node : outputs) {
+			backprop(&node);
+		}
+	}
+};
 
 int main() {
 	std::random_device rd;
@@ -35,38 +104,52 @@ int main() {
 
 	std::cout << board << "\n";
 
-	// Exclude the deck
-	std::uniform_int_distribution<> idx_distrib{0, (Board::COLS * Board::ROWS + 4)};
+	Robot<Board::COLS * Board::ROWS + 6, 2> robot{g};
 
-	for (int i = 0; i < 1000; ++i) {
-		size_t tries = 0;
-		size_t idx_a = 0;
-		size_t idx_b = 0;
-		while (!board.is_legal_move(idx_a, idx_b)) {
-			idx_a = idx_distrib(g);
-			idx_b = idx_distrib(g);
-			++tries;
+	std::vector<double> board_arr{};
 
-			std::cout << tries << "\r";
-
-			// Failsafe for if we don't have any legal moves
-			if (tries > 50000) {
-				idx_a = Board::DECK_IDX;
-				break;
-			}
-		}
-
-		// If we tripped the failsafe but can't draw just give up
-		if (!board.is_legal_move(idx_a, idx_b)) {
-			break;
-		}
-
-		std::cout << "Tries: " << tries << ", indices: " << idx_a << ", " << idx_b << "\n";
-		board.perform_move(idx_a, idx_b);
-		std::cout << board << "\n";
+	for (size_t i = 0; i < Board::COLS * Board::ROWS + 6; ++i) {
+		board_arr.push_back(board.cindex(i).get_rep_num());
 	}
 
-	std::cout << board.draw_pile.cards << "\n";
+	robot.set_inputs(board_arr);
+
+	robot.backprop();
+
+	std::cout << robot.outputs << "\n";
+
+	// // Exclude the deck
+	// std::uniform_int_distribution<> idx_distrib{0, (Board::COLS * Board::ROWS + 4)};
+
+	// for (int i = 0; i < 1000; ++i) {
+	// 	size_t tries = 0;
+	// 	size_t idx_a = 0;
+	// 	size_t idx_b = 0;
+	// 	while (!board.is_legal_move(idx_a, idx_b)) {
+	// 		idx_a = idx_distrib(g);
+	// 		idx_b = idx_distrib(g);
+	// 		++tries;
+
+	// 		std::cout << tries << "\r";
+
+	// 		// Failsafe for if we don't have any legal moves
+	// 		if (tries > 50000) {
+	// 			idx_a = Board::DECK_IDX;
+	// 			break;
+	// 		}
+	// 	}
+
+	// 	// If we tripped the failsafe but can't draw just give up
+	// 	if (!board.is_legal_move(idx_a, idx_b)) {
+	// 		break;
+	// 	}
+
+	// 	std::cout << "Tries: " << tries << ", indices: " << idx_a << ", " << idx_b << "\n";
+	// 	board.perform_move(idx_a, idx_b);
+	// 	std::cout << board << "\n";
+	// }
+
+	// std::cout << board.draw_pile.cards << "\n";
 
 	return 0;
 }

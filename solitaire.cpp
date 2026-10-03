@@ -169,7 +169,9 @@ Card Board::index(size_t idx) const {
 
 	return get_deck_card();
 }
-
+Card Board::cindex(size_t idx) const {
+	return index(idx);
+}
 Card& Board::index(size_t idx) {
 	if (idx < COLS * ROWS) {
 		return get_board_card(idx);

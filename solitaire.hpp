@@ -135,8 +135,8 @@ struct Board {
 
 	void deal(Deck& deck);
 
+	Card cindex(size_t idx) const;
 	Card index(size_t idx) const;
-
 	Card& index(size_t idx);
 
 	// God this is just begging to have actual testing
@@ -146,6 +146,8 @@ struct Board {
 	bool is_legal_move(size_t idx_a, size_t idx_b) const;
 
 	void perform_move(size_t idx_a, size_t idx_b);
+
+	std::vector<size_t> serialize() const;
 
 	friend std::ostream& operator<<(std::ostream& os, const Board& board) {
 		for (auto&& row : board.main_board) {
