@@ -126,7 +126,10 @@ struct Board {
 	public:
 	static constexpr size_t COLS = 7;
 	static constexpr size_t ROWS = COLS + 13 - 1;
-	static constexpr size_t DECK_IDX = ROWS * COLS + 5;
+	static constexpr size_t DECK_IDX = 0;
+	static constexpr size_t FLIP_IDX = DECK_IDX + 1;
+	static constexpr size_t ACE_IDX = FLIP_IDX + 1;
+	static constexpr size_t BOARD_IDX = ACE_IDX + 4;
 
 	std::array<std::array<Card, COLS>, ROWS> main_board{};
 	std::array<std::vector<Card>, 4> aces = {std::vector<Card>{EMPTY_CARD}, {EMPTY_CARD}, {EMPTY_CARD}, {EMPTY_CARD}};

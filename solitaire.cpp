@@ -153,41 +153,33 @@ void Board::deal(Deck& deck) {
 }
 
 Card Board::index(size_t idx) const {
-	if (idx < COLS * ROWS) {
-		return get_board_card(idx);
+	if (idx == DECK_IDX) {
+		return get_deck_card();
+	}
+	if (idx == FLIP_IDX) {
+		return get_flip_card();
+	}
+	if (idx < BOARD_IDX) {
+		return get_ace_card(idx - ACE_IDX);
 	}
 
-	idx -= COLS * ROWS;
-	if (idx < 4) {
-		return get_ace_card(idx);
-	}
-
-	idx -= 4;
-	if (idx == 0) {
-		return get_flipped_card();
-	}
-
-	return get_deck_card();
+	return get_board_card(idx - BOARD_IDX);
 }
 Card Board::cindex(size_t idx) const {
 	return index(idx);
 }
 Card& Board::index(size_t idx) {
-	if (idx < COLS * ROWS) {
-		return get_board_card(idx);
+	if (idx == DECK_IDX) {
+		return get_deck_card();
+	}
+	if (idx == FLIP_IDX) {
+		return get_flip_card();
+	}
+	if (idx < BOARD_IDX) {
+		return get_ace_card(idx - ACE_IDX);
 	}
 
-	idx -= COLS * ROWS;
-	if (idx < 4) {
-		return get_ace_card(idx);
-	}
-
-	idx -= 4;
-	if (idx == 0) {
-		return get_flipped_card();
-	}
-
-	return get_deck_card();
+	return get_board_card(idx - BOARD_IDX);
 }
 
 // God this is just begging to have actual testing
@@ -280,17 +272,18 @@ bool Board::is_legal_move(size_t idx_a, size_t idx_b) const {
 
 	/// Properties of an index itself
 	// Checks if the index is the draw pile
-	const auto is_deck = [](size_t idx) { return idx == (COLS * ROWS + 5); };
+	const auto is_deck = [](size_t idx) { return idx == DECK_IDX; };
 	// Checks if the index is the flip pile
-	const auto is_flip_pile = [](size_t idx) { return idx == (COLS * ROWS + 4); };
+	const auto is_flip_pile = [](size_t idx) { return idx == FLIP_IDX; };
 	// Checks if the index is one of the four ace slots
-	const auto is_ace_slot = [](size_t idx) { return idx >= (COLS * ROWS) && idx < (COLS * ROWS + 4); };
+	const auto is_ace_slot = [](size_t idx) { return idx >= ACE_IDX && idx < BOARD_IDX; };
 	// Checks if the index is in the main board of cards
-	const auto is_board = [](size_t idx) { return idx < (COLS * ROWS); };
+	const auto is_board = [](size_t idx) { return idx >= BOARD_IDX; };
 	// Checks if the index is in the top row of the board
-	const auto is_top_row = [](size_t idx) { return idx < COLS; };
+	// Meaningless if idx is not on the board
+	const auto is_top_row = [](size_t idx) { return (idx - BOARD_IDX) < COLS; };
 	// Checks if the index is in the bottom row of the board
-	const auto is_bottom_row = [](size_t idx) { return idx > (COLS * (ROWS - 1)) && idx < (COLS * ROWS); };
+	const auto is_bottom_row = [](size_t idx) { return idx > (COLS * (ROWS - 1) + BOARD_IDX); };
 
 	/// Index modifying functions
 	// Get the index of the card one above this one
@@ -307,6 +300,8 @@ bool Board::is_legal_move(size_t idx_a, size_t idx_b) const {
 		if (is_bottom_row(idx)) return idx;
 		return idx + COLS;
 	};
+	// Get the index of the nth ace
+	const auto get_ace = [](size_t n) { return ACE_IDX + n; }
 
 	/// Properties of the card at an index
 	// Check if the card at an index is empty
@@ -364,7 +359,7 @@ bool Board::is_legal_move(size_t idx_a, size_t idx_b) const {
 					auto target_rank = get_rank(one_above(idx_a)) - 1;
 					bool ace_match = false;
 					for (size_t i = 0; i < 4; ++i) {
-						if (get_suit(i + (COLS * ROWS)) == target_suit && get_rank(i + (COLS * ROWS)) == target_rank) {
+						if (get_suit(get_ace(i)) == target_suit && get_rank(get_ace(i)) == target_rank) {
 							ace_match = true;
 							break;
 						}
@@ -439,17 +434,18 @@ void Board::perform_move(size_t idx_a, size_t idx_b) {
 
 	/// Properties of an index itself
 	// Checks if the index is the draw pile
-	const auto is_deck = [](size_t idx) { return idx == (COLS * ROWS + 5); };
+	const auto is_deck = [](size_t idx) { return idx == DECK_IDX; };
 	// Checks if the index is the flip pile
-	const auto is_flip_pile = [](size_t idx) { return idx == (COLS * ROWS + 4); };
+	const auto is_flip_pile = [](size_t idx) { return idx == FLIP_IDX; };
 	// Checks if the index is one of the four ace slots
-	const auto is_ace_slot = [](size_t idx) { return idx >= (COLS * ROWS) && idx < (COLS * ROWS + 4); };
+	const auto is_ace_slot = [](size_t idx) { return idx >= ACE_IDX && idx < BOARD_IDX; };
 	// Checks if the index is in the main board of cards
-	const auto is_board = [](size_t idx) { return idx < (COLS * ROWS); };
+	const auto is_board = [](size_t idx) { return idx >= BOARD_IDX; };
 	// Checks if the index is in the top row of the board
-	const auto is_top_row = [](size_t idx) { return idx < COLS; };
+	// Meaningless if idx is not on the board
+	const auto is_top_row = [](size_t idx) { return (idx - BOARD_IDX) < COLS; };
 	// Checks if the index is in the bottom row of the board
-	const auto is_bottom_row = [](size_t idx) { return idx > (COLS * (ROWS - 1)) && idx < (COLS * ROWS); };
+	const auto is_bottom_row = [](size_t idx) { return idx > (COLS * (ROWS - 1) + BOARD_IDX); };
 
 	/// Index modifying functions
 	// Get the index of the card one above this one
