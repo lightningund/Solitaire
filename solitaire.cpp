@@ -349,6 +349,24 @@ bool Board::is_legal_move(size_t idx_a, size_t idx_b) const {
 				if (is_same_color(idx_a, one_above(idx_b))) return false;
 				if (get_rank(idx_a) + 1 != get_rank(one_above(idx_b))) return false;
 
+				// ADDITIONAL STIPULATION:
+				// If the moving card already had a match behind it,
+				//	only allow it if the card behind the moving card has a matching ace
+				// This prevents the AI from just shuffling them back and forth
+				// But still allows shifting them around when you need to get to the ace
+				if (get_rank(idx_a) + 1 == get_rank(one_above(idx_a))) {
+					auto target_suit = get_suit(one_above(idx_a));
+					bool ace_match = false;
+					for (size_t i = 0; i < 4; ++i) {
+						if (get_suit(i + (COLS * ROWS)) == target_suit) {
+							ace_match = true;
+							break;
+						}
+					}
+
+					if (!ace_match) return false;
+				}
+
 				return true;
 			}
 		} else {
