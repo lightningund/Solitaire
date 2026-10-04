@@ -339,7 +339,7 @@ bool Board::is_legal_move(size_t idx_a, size_t idx_b) const {
 				// ADDITIONAL STIPULATION:
 				// If the king is already on the top, also illegal
 				// This prevents the AI from moving it back and forth forever
-				if (is_top_row(idx_a)) return false;
+				if (is_board(idx_a) && is_top_row(idx_a)) return false;
 
 				return true;
 			} else {
