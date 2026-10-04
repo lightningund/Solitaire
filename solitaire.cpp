@@ -513,3 +513,44 @@ void Board::perform_move(size_t idx_a, size_t idx_b) {
 		}
 	}
 }
+
+bool Board::has_won() const {
+	for (size_t i = 0; i < 4; ++i) {
+		if (get_ace_card(i).rank() != 12) return false;
+	}
+
+	return true;
+}
+
+size_t Board::num_ace_cards() const {
+	size_t num = 0;
+	for (size_t i = 0; i < 4; ++i) {
+		num += aces[i].size();
+	}
+
+	return num;
+}
+
+size_t Board::num_face_up() const {
+	size_t num = 0;
+	for (auto&& row : main_board) {
+		for (auto&& card : row) {
+			if (!card.empty() && !card.face_down) ++num;
+		}
+	}
+
+	return num;
+}
+
+double Board::score() const {
+	static const double win_bonus = 1e6;
+	static const double ace_score = 100.0;
+	static const double face_up_score = 1.0;
+
+	if (has_won()) {
+		// TODO: subtract number of turns
+		return win_bonus;
+	} else {
+		return num_ace_cards() * ace_score + num_face_up() * face_up_score;
+	}
+}

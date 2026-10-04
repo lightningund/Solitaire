@@ -123,6 +123,10 @@ struct Board {
 
 	void move_card(size_t src, size_t dst);
 
+	bool has_won() const;
+	size_t num_ace_cards() const;
+	size_t num_face_up() const;
+
 	public:
 	static constexpr size_t COLS = 7;
 	static constexpr size_t ROWS = COLS + 13 - 1;
@@ -152,7 +156,7 @@ struct Board {
 
 	void perform_move(size_t idx_a, size_t idx_b);
 
-	std::vector<size_t> serialize() const;
+	double score() const;
 
 	friend std::ostream& operator<<(std::ostream& os, const Board& board) {
 		for (auto&& row : board.main_board) {
