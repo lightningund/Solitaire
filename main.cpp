@@ -92,6 +92,40 @@ struct Robot {
 	}
 };
 
+template <typename RNG>
+void random_player(RNG& gen, Board& board) {
+	// Exclude the deck
+	std::uniform_int_distribution<> idx_distrib{1, Board::END_IDX - 1};
+
+	for (int i = 0; i < 1000; ++i) {
+		size_t tries = 0;
+		size_t idx_a = 0;
+		size_t idx_b = 0;
+		do {
+			idx_a = idx_distrib(gen);
+			idx_b = idx_distrib(gen);
+			++tries;
+
+			std::cout << tries << "\r";
+
+			// Failsafe for if we don't have any legal moves
+			if (tries > 50000) {
+				idx_a = Board::DECK_IDX;
+				break;
+			}
+		} while (!board.is_legal_move(idx_a, idx_b));
+
+		// If we tripped the failsafe but can't draw just give up
+		if (!board.is_legal_move(idx_a, idx_b)) {
+			break;
+		}
+
+		std::cout << "Tries: " << tries << ", indices: " << idx_a << ", " << idx_b << "\n";
+		board.perform_move(idx_a, idx_b);
+		std::cout << board << "\n";
+	}
+}
+
 int main() {
 	std::random_device rd;
 	std::mt19937 g(rd());
@@ -118,36 +152,7 @@ int main() {
 
 	std::cout << robot.outputs << "\n";
 
-	// Exclude the deck
-	std::uniform_int_distribution<> idx_distrib{1, Board::END_IDX - 1};
-
-	for (int i = 0; i < 1000; ++i) {
-		size_t tries = 0;
-		size_t idx_a = 0;
-		size_t idx_b = 0;
-		do {
-			idx_a = idx_distrib(g);
-			idx_b = idx_distrib(g);
-			++tries;
-
-			std::cout << tries << "\r";
-
-			// Failsafe for if we don't have any legal moves
-			if (tries > 50000) {
-				idx_a = Board::DECK_IDX;
-				break;
-			}
-		} while (!board.is_legal_move(idx_a, idx_b));
-
-		// If we tripped the failsafe but can't draw just give up
-		if (!board.is_legal_move(idx_a, idx_b)) {
-			break;
-		}
-
-		std::cout << "Tries: " << tries << ", indices: " << idx_a << ", " << idx_b << "\n";
-		board.perform_move(idx_a, idx_b);
-		std::cout << board << "\n";
-	}
+	random_player(g, board);
 
 	std::cout << board.draw_pile.cards << "\n";
 
