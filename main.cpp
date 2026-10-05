@@ -30,7 +30,8 @@ struct Node;
 struct Connection {
 	double weight;
 	// The one whose value we source from
-	Node* backtarget;
+	// Indexed as if the input nodes and the free floating nodes are smushed together
+	size_t backtarget;
 };
 
 struct Node {
@@ -55,11 +56,11 @@ struct Robot {
 		std::uniform_real_distribution<> prob_dist{0, 1};
 		std::uniform_real_distribution<> weight_dist{-1, 1};
 		for (auto& outnode : outputs) {
-			for (auto& innode : inputs) {
+			for (size_t i = 0; i < num_input; ++i) {
 				if (prob_dist(gen) > 0.5) {
 					outnode.cons.push_back(Connection {
 						weight_dist(gen),
-						&innode
+						i
 					});
 				}
 			}
@@ -73,26 +74,76 @@ struct Robot {
 		}
 	}
 
-	static void backprop(Node* n) {
-		n->value = n->bias;
-		for (auto& con : n->cons) {
-			if (!con.backtarget->propagated) {
-				backprop(con.backtarget);
-			}
+	void backprop(Node& n) {
+		if (n.propagated) return;
+
+		n.value = n.bias;
+		for (auto& con : n.cons) {
+			auto back = get_src_node(con.backtarget);
+			backprop(back);
 
 			// TODO: Add activation function
-			n->value += con.backtarget->value * con.weight;
+			n.value += back.value * con.weight;
 		}
 
-		n->propagated = true;
+		n.propagated = true;
 	}
 
 	void backprop() {
 		for (auto& node : nodes) {
 			node.propagated = false;
 		}
+
 		for (auto& node : outputs) {
-			backprop(&node);
+			node.propagated = false;
+			backprop(node);
+		}
+	}
+
+	Node& get_src_node(size_t idx) {
+		if (idx < num_input) {
+			return inputs[idx];
+		} else {
+			return nodes[idx - num_input];
+		}
+	}
+	const Node& get_src_node(size_t idx) const {
+		if (idx < num_input) {
+			return inputs[idx];
+		} else {
+			return nodes[idx - num_input];
+		}
+	}
+
+	template <typename RNG>
+	size_t select_src_idx(RNG& gen) {
+		std::uniform_int_distribution<> src_distrib{0, static_cast<int>(num_input + nodes.size() - 1)};
+		return src_distrib(gen);
+	}
+
+	template <typename RNG>
+	Node* select_dst_node(RNG& gen) {
+		std::uniform_int_distribution<> dst_distrib{0, static_cast<int>(num_output + nodes.size() - 1)};
+		int dst_idx = dst_distrib(gen);
+
+		if (dst_idx < num_output) {
+			return &outputs[dst_idx];
+		} else {
+			return &nodes[dst_idx - num_output];
+		}
+	}
+
+	template <typename RNG>
+	Node* select_any_node(RNG& gen) {
+		std::uniform_int_distribution<> idx_distrib{0, static_cast<int>(num_input + num_output + nodes.size() - 1)};
+		int idx = idx_distrib(gen);
+
+		if (idx < num_output) {
+			return &outputs[idx];
+		} else if (idx < num_output + num_input) {
+			return &inputs[idx - num_output];
+		} else {
+			return &nodes[idx - num_output - num_input];
 		}
 	}
 
@@ -103,6 +154,8 @@ struct Robot {
 			// Add node
 			// Change connection weight
 			// Change node bias
+			// TODO: Remove connection?
+			// TODO: Remove node?
 		const double NODE_CHANCE = 0.3;
 		const double CONNECTION_CHANCE = 0.7;
 		const double WEIGHT_CHANCE = 0.3;
@@ -112,25 +165,8 @@ struct Robot {
 
 		if (prob_dist(gen) < CONNECTION_CHANCE) {
 			std::cout << "Adding new connection\n";
-			// Split this into select_src_node() and select_dst_node()
-			std::uniform_int_distribution<> src_distrib{0, static_cast<int>(num_input + nodes.size() - 1)};
-			std::uniform_int_distribution<> dst_distrib{0, static_cast<int>(num_output + nodes.size() - 1)};
-			int src_idx = src_distrib(gen);
-			int dst_idx = dst_distrib(gen);
-
-			Node* src;
-			Node* dst;
-			if (src_idx < num_input) {
-				src = &inputs[src_idx];
-			} else {
-				src = &nodes[src_idx - num_input];
-			}
-
-			if (dst_idx < num_output) {
-				dst = &outputs[dst_idx];
-			} else {
-				dst = &nodes[dst_idx - num_output];
-			}
+			auto src = select_src_idx(gen);
+			Node* dst = select_dst_node(gen);
 
 			dst->cons.push_back(Connection {
 				0, // TODO Weight
@@ -140,48 +176,26 @@ struct Robot {
 			std::cout << "Adding new node\n";
 			std::uniform_int_distribution<> out_distrib{0, num_output - 1};
 			nodes.push_back(Node{});
-			outputs[out_distrib(gen)].cons.push_back(Connection {
+			select_dst_node(gen)->cons.push_back(Connection {
 				1, // TODO Bias
-				&nodes.back()
+				num_input + nodes.size() - 1
 			});
 		} else if (prob_dist(gen) < WEIGHT_CHANCE) {
 			std::cout << "Modifying connection weight\n";
-			// Split this into select_dst_node()
-			std::uniform_int_distribution<> idx_distrib{0ul, static_cast<int>(num_output + nodes.size() - 1)};
-			std::uniform_real_distribution<> weight_dist{-0.1, 0.1};
-
-			size_t idx = idx_distrib(gen);
-			Node* node;
-			if (idx < num_output) {
-				node = &outputs[idx];
-			} else {
-				node = &nodes[idx - num_output];
-			}
+			Node* node = select_dst_node(gen);
 
 			if (!node->cons.empty()) {
 				// Select the connection within the node
 				std::uniform_int_distribution<> con_distrib{0, static_cast<int>(node->cons.size() - 1)};
 				int con_idx = con_distrib(gen);
 
+				std::uniform_real_distribution<> weight_dist{-0.1, 0.1};
 				node->cons[con_idx].weight += weight_dist(gen);
 			}
 		} else if (prob_dist(gen) < BIAS_CHANCE) {
 			std::cout << "Modifying node bias\n";
-			// Split this into select_any_node()
-			std::uniform_int_distribution<> idx_distrib{0, static_cast<int>(num_input + num_output + nodes.size() - 1)};
 			std::uniform_real_distribution<> bias_dist{-0.1, 0.1};
-
-			int idx = idx_distrib(gen);
-			Node* node;
-			if (idx < num_output) {
-				node = &outputs[idx];
-			} else if (idx < num_output + num_input) {
-				node = &inputs[idx - num_output];
-			} else {
-				node = &nodes[idx - num_output - num_input];
-			}
-
-			node->bias += bias_dist(gen);
+			select_any_node(gen)->bias += bias_dist(gen);
 		}
 	}
 
@@ -193,18 +207,18 @@ struct Robot {
 		// TODO
 	}
 
-	static void node_path(std::ostream& os, const Node* n, size_t depth) {
-		os << n->bias;
-		for (auto&& con : n->cons) {
+	void node_path(std::ostream& os, const Node& n, size_t depth) const {
+		os << n.bias;
+		for (auto&& con : n.cons) {
 			os << "\n" << std::string(depth + 1, '\t');
-			node_path(os, con.backtarget, depth + 1);
+			node_path(os, get_src_node(con.backtarget), depth + 1);
 		}
 	}
 
 	friend std::ostream& operator<<(std::ostream& os, const Robot& rob) {
 		os << std::setprecision(2);
-		for (auto&& n : rob.outputs) {
-			node_path(os, &n, 0);
+		for (int i = 0; i < rob.outputs.size(); ++i) {
+			rob.node_path(os, rob.outputs[i], 0);
 			os << "\n";
 		}
 
