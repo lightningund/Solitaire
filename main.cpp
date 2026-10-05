@@ -110,6 +110,7 @@ struct Robot {
 		std::uniform_real_distribution<> prob_dist{0, 1};
 
 		if (prob_dist(gen) < NODE_CHANCE) {
+			std::cout << "Adding new node\n";
 			std::uniform_int_distribution<> out_distrib{0, num_output - 1};
 			nodes.push_back(Node{});
 			outputs[out_distrib(gen)].cons.push_back(Connection {
@@ -117,11 +118,12 @@ struct Robot {
 				&nodes.back()
 			});
 		} else if (prob_dist(gen) < CONNECTION_CHANCE) {
+			std::cout << "Adding new connection\n";
 			// Split this into select_src_node() and select_dst_node()
-			std::uniform_int_distribution<> src_distrib{0, num_input + nodes.size() - 1};
-			std::uniform_int_distribution<> dst_distrib{0, num_output + nodes.size() - 1};
-			auto src_idx = src_distrib(gen);
-			auto dst_idx = dst_distrib(gen);
+			std::uniform_int_distribution<> src_distrib{0, static_cast<int>(num_input + nodes.size() - 1)};
+			std::uniform_int_distribution<> dst_distrib{0, static_cast<int>(num_output + nodes.size() - 1)};
+			int src_idx = src_distrib(gen);
+			int dst_idx = dst_distrib(gen);
 
 			Node* src;
 			Node* dst;
@@ -142,11 +144,12 @@ struct Robot {
 				src
 			});
 		} else if (prob_dist(gen) < WEIGHT_CHANCE) {
+			std::cout << "Modifying connection weight\n";
 			// Split this into select_dst_node()
-			std::uniform_int_distribution<> idx_distrib{0, num_output + nodes.size() - 1};
+			std::uniform_int_distribution<> idx_distrib{0ul, static_cast<int>(num_output + nodes.size() - 1)};
 			std::uniform_real_distribution<> weight_dist{-0.1, 0.1};
 
-			auto idx = idx_distrib(gen);
+			size_t idx = idx_distrib(gen);
 			Node* node;
 			if (idx < num_output) {
 				node = &outputs[idx];
@@ -154,17 +157,20 @@ struct Robot {
 				node = &nodes[idx - num_output];
 			}
 
-			// Select the connection within the node
-			std::uniform_int_distribution<> con_distrib{0, static_cast<int>(node->cons.size()) - 1};
-			auto con_idx = con_distrib(gen);
+			if (!node->cons.empty()) {
+				// Select the connection within the node
+				std::uniform_int_distribution<> con_distrib{0, static_cast<int>(node->cons.size() - 1)};
+				int con_idx = con_distrib(gen);
 
-			node->cons[con_idx].weight += weight_dist(gen);
+				node->cons[con_idx].weight += weight_dist(gen);
+			}
 		} else if (prob_dist(gen) < BIAS_CHANCE) {
+			std::cout << "Modifying node bias\n";
 			// Split this into select_any_node()
-			std::uniform_int_distribution<> idx_distrib{0, num_input + num_output + nodes.size() - 1};
+			std::uniform_int_distribution<> idx_distrib{0, static_cast<int>(num_input + num_output + nodes.size() - 1)};
 			std::uniform_real_distribution<> bias_dist{-0.1, 0.1};
 
-			auto idx = idx_distrib(gen);
+			int idx = idx_distrib(gen);
 			Node* node;
 			if (idx < num_output) {
 				node = &outputs[idx];
@@ -174,7 +180,7 @@ struct Robot {
 				node = &nodes[idx - num_output - num_input];
 			}
 
-			node->bias += weight_dist(gen);
+			node->bias += bias_dist(gen);
 		}
 	}
 
@@ -246,6 +252,12 @@ int main() {
 	robot.backprop();
 
 	std::cout << robot.outputs << "\n";
+
+	for (int i = 0; i < 100; ++i) {
+		robot.mutate(g);
+		robot.backprop();
+		std::cout << robot.outputs << "\n";
+	}
 
 	// random_player(g, board);
 
