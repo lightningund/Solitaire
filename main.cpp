@@ -18,6 +18,7 @@
 // deck
 // turned card
 
+#include <iomanip>
 #include <iostream>
 #include <random>
 #include <span>
@@ -103,21 +104,13 @@ struct Robot {
 			// Change connection weight
 			// Change node bias
 		const double NODE_CHANCE = 0.3;
-		const double CONNECTION_CHANCE = 0.3;
+		const double CONNECTION_CHANCE = 0.7;
 		const double WEIGHT_CHANCE = 0.3;
 		const double BIAS_CHANCE = 0.3;
 
 		std::uniform_real_distribution<> prob_dist{0, 1};
 
-		if (prob_dist(gen) < NODE_CHANCE) {
-			std::cout << "Adding new node\n";
-			std::uniform_int_distribution<> out_distrib{0, num_output - 1};
-			nodes.push_back(Node{});
-			outputs[out_distrib(gen)].cons.push_back(Connection {
-				1, // TODO Bias
-				&nodes.back()
-			});
-		} else if (prob_dist(gen) < CONNECTION_CHANCE) {
+		if (prob_dist(gen) < CONNECTION_CHANCE) {
 			std::cout << "Adding new connection\n";
 			// Split this into select_src_node() and select_dst_node()
 			std::uniform_int_distribution<> src_distrib{0, static_cast<int>(num_input + nodes.size() - 1)};
@@ -142,6 +135,14 @@ struct Robot {
 			dst->cons.push_back(Connection {
 				0, // TODO Weight
 				src
+			});
+		} else if (prob_dist(gen) < NODE_CHANCE) {
+			std::cout << "Adding new node\n";
+			std::uniform_int_distribution<> out_distrib{0, num_output - 1};
+			nodes.push_back(Node{});
+			outputs[out_distrib(gen)].cons.push_back(Connection {
+				1, // TODO Bias
+				&nodes.back()
 			});
 		} else if (prob_dist(gen) < WEIGHT_CHANCE) {
 			std::cout << "Modifying connection weight\n";
@@ -190,6 +191,24 @@ struct Robot {
 
 	static Robot read(std::istream& is) {
 		// TODO
+	}
+
+	static void node_path(std::ostream& os, const Node* n, size_t depth) {
+		os << n->bias;
+		for (auto&& con : n->cons) {
+			os << "\n" << std::string(depth + 1, '\t');
+			node_path(os, con.backtarget, depth + 1);
+		}
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const Robot& rob) {
+		os << std::setprecision(2);
+		for (auto&& n : rob.outputs) {
+			node_path(os, &n, 0);
+			os << "\n";
+		}
+
+		return os;
 	}
 };
 
@@ -258,6 +277,10 @@ int main() {
 		robot.backprop();
 		std::cout << robot.outputs << "\n";
 	}
+
+	std::cout << robot.nodes.size() << "\n";
+
+	std::cout << robot << "\n";
 
 	// random_player(g, board);
 
