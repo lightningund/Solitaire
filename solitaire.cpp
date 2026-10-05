@@ -354,7 +354,7 @@ bool Board::is_legal_move(size_t idx_a, size_t idx_b) const {
 				//	that is also one rank below
 				// This prevents the AI from just shuffling them back and forth
 				// But still allows shifting them around when you need to get to the ace
-				if (get_rank(idx_a) + 1 == get_rank(one_above(idx_a))) {
+				if (is_board(idx_a) && get_rank(idx_a) + 1 == get_rank(one_above(idx_a))) {
 					auto target_suit = get_suit(one_above(idx_a));
 					auto target_rank = get_rank(one_above(idx_a)) - 1;
 					bool ace_match = false;
