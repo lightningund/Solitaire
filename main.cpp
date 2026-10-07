@@ -22,6 +22,7 @@
 #include <iostream>
 #include <random>
 #include <span>
+#include <sstream>
 
 #include "solitaire.hpp"
 
@@ -43,7 +44,66 @@ struct Node {
 	friend std::ostream& operator<<(std::ostream& os, const Node& node) {
 		return os << node.value;
 	}
+
+	// Let's do, say bias: f64, cons: [weight: f64, idx: u64, ...]X
+	// So like 10.3 4.01 12 -0.01 180X
+	// bias, then the weight and idx of each connection, delimiting with an X
+	void serialize(std::ostream& os) const {
+		os << bias << " ";
+
+		for (auto con : cons) {
+			os << con.weight << " " << con.backtarget << " ";
+		}
+
+		os << "X";
+	}
+
+	friend std::istream& operator>>(std::istream& is, Node& node) {
+		is >> node.bias;
+
+		// Modified from https://en.cppreference.com/cpp/io/basic_istream/ignore
+		while (true) {
+			// Attempt to read in the weight of the next connection
+			double weight;
+			is >> weight;
+
+			// If we hit the end or something is wrong or we couldn't read another weight,
+			// then we're done
+			if (is.eof() || is.bad() || is.fail()) {
+				is.clear();
+				// Skip ahead the X
+				is.seekg(1, std::ios::cur);
+				break;
+			} else {
+				// Read in the index of the backtarget
+				size_t idx;
+				is >> idx;
+				node.cons.push_back(Connection { weight, idx });
+			}
+		}
+
+		return is;
+	}
 };
+
+void test_node_serial() {
+	Node n{};
+	n.bias = 12.3;
+	n.cons.push_back(Connection { 0.01, 180 });
+
+	std::stringstream ss{};
+
+	n.serialize(std::cout);
+	std::cout << "\n";
+	n.serialize(ss);
+	ss.seekg(0, std::ios::beg);
+
+	Node remade{};
+	ss >> remade;
+
+	remade.serialize(std::cout);
+	std::cout << "\n";
+}
 
 template <size_t num_input, size_t num_output>
 struct Robot {
@@ -55,16 +115,17 @@ struct Robot {
 	Robot(RNG& gen) {
 		std::uniform_real_distribution<> prob_dist{0, 1};
 		std::uniform_real_distribution<> weight_dist{-1, 1};
-		for (auto& outnode : outputs) {
-			for (size_t i = 0; i < num_input; ++i) {
-				if (prob_dist(gen) > 0.5) {
-					outnode.cons.push_back(Connection {
-						weight_dist(gen),
-						i
-					});
-				}
-			}
-		}
+		// Randomly connects the outputs to the inputs
+		// for (auto& outnode : outputs) {
+		// 	for (size_t i = 0; i < num_input; ++i) {
+		// 		if (prob_dist(gen) > 0.5) {
+		// 			outnode.cons.push_back(Connection {
+		// 				weight_dist(gen),
+		// 				i
+		// 			});
+		// 		}
+		// 	}
+		// }
 	}
 
 	void set_inputs(std::span<double> vals) {
@@ -156,14 +217,30 @@ struct Robot {
 			// Change node bias
 			// TODO: Remove connection?
 			// TODO: Remove node?
+		const double WEIGHT_CHANCE = 0.4;
+		const double BIAS_CHANCE = 0.5;
+		const double CONNECTION_CHANCE = 0.3;
 		const double NODE_CHANCE = 0.3;
-		const double CONNECTION_CHANCE = 0.7;
-		const double WEIGHT_CHANCE = 0.3;
-		const double BIAS_CHANCE = 0.3;
 
 		std::uniform_real_distribution<> prob_dist{0, 1};
 
-		if (prob_dist(gen) < CONNECTION_CHANCE) {
+		if (prob_dist(gen) < WEIGHT_CHANCE) {
+			std::cout << "Modifying connection weight\n";
+			Node* node = select_dst_node(gen);
+
+			if (!node->cons.empty()) {
+				// Select the connection within the node
+				std::uniform_int_distribution<> con_distrib{0, static_cast<int>(node->cons.size() - 1)};
+				int con_idx = con_distrib(gen);
+
+				std::uniform_real_distribution<> weight_dist{-0.1, 0.1};
+				node->cons[con_idx].weight += weight_dist(gen);
+			}
+		} else if (prob_dist(gen) < BIAS_CHANCE) {
+			std::cout << "Modifying node bias\n";
+			std::uniform_real_distribution<> bias_dist{-0.1, 0.1};
+			select_any_node(gen)->bias += bias_dist(gen);
+		} else if (prob_dist(gen) < CONNECTION_CHANCE) {
 			std::cout << "Adding new connection\n";
 			auto src = select_src_idx(gen);
 			Node* dst = select_dst_node(gen);
@@ -180,31 +257,49 @@ struct Robot {
 				1, // TODO Bias
 				num_input + nodes.size() - 1
 			});
-		} else if (prob_dist(gen) < WEIGHT_CHANCE) {
-			std::cout << "Modifying connection weight\n";
-			Node* node = select_dst_node(gen);
-
-			if (!node->cons.empty()) {
-				// Select the connection within the node
-				std::uniform_int_distribution<> con_distrib{0, static_cast<int>(node->cons.size() - 1)};
-				int con_idx = con_distrib(gen);
-
-				std::uniform_real_distribution<> weight_dist{-0.1, 0.1};
-				node->cons[con_idx].weight += weight_dist(gen);
-			}
-		} else if (prob_dist(gen) < BIAS_CHANCE) {
-			std::cout << "Modifying node bias\n";
-			std::uniform_real_distribution<> bias_dist{-0.1, 0.1};
-			select_any_node(gen)->bias += bias_dist(gen);
 		}
 	}
 
-	std::ostream& serialize(std::ostream& os) const {
-		// TODO
+	// First N will be inputs, then the next amount will be outputs
+	void serialize(std::ostream& os) const {
+		for (auto& n : inputs) {
+			n.serialize(os);
+		}
+
+		for (auto& n : outputs) {
+			n.serialize(os);
+		}
+
+		for (auto& n : nodes) {
+			n.serialize(os);
+		}
 	}
 
-	static Robot read(std::istream& is) {
-		// TODO
+	friend std::istream& operator>>(std::istream& is, Robot& rob) {
+		for (auto& n : rob.inputs) {
+			is >> n;
+		}
+
+		for (auto& n : rob.outputs) {
+			is >> n;
+		}
+
+		while (true) {
+			// Attempt to read in the next node
+			Node n;
+			is >> n;
+
+			// If we hit the end or something is wrong or we couldn't read another node,
+			// then we're done
+			if (is.eof() || is.bad() || is.fail()) {
+				is.clear();
+				break;
+			} else {
+				rob.nodes.push_back(n);
+			}
+		}
+
+		return is;
 	}
 
 	void node_path(std::ostream& os, const Node& n, size_t depth) const {
@@ -225,6 +320,42 @@ struct Robot {
 		return os;
 	}
 };
+
+void test_robot_serial() {
+	std::random_device rd;
+	std::mt19937 g(rd());
+
+	Robot<Board::END_IDX, 2> robot{g};
+
+	std::stringstream ss{};
+
+	robot.serialize(std::cout);
+	std::cout << "\n";
+	robot.serialize(ss);
+	ss.seekg(0, std::ios::beg);
+
+	Robot<Board::END_IDX, 2> remade{g};
+	ss >> remade;
+
+	remade.serialize(std::cout);
+	std::cout << "\n";
+
+	for (int i = 0; i < 100; ++i) {
+		robot.mutate(g);
+	}
+
+	std::stringstream ss2{};
+	robot.serialize(std::cout);
+	std::cout << "\n";
+	robot.serialize(ss2);
+	ss2.seekg(0, std::ios::beg);
+
+	Robot<Board::END_IDX, 2> remade2{g};
+	ss2 >> remade2;
+
+	remade2.serialize(std::cout);
+	std::cout << "\n";
+}
 
 template <typename RNG>
 void random_player(RNG& gen, Board& board) {
@@ -260,7 +391,14 @@ void random_player(RNG& gen, Board& board) {
 	}
 }
 
+void run_robot(Robot<Board::END_IDX - 1, 2>& rob, Board b, size_t num_turns) {
+	// TODO
+}
+
 int main() {
+	test_node_serial();
+	test_robot_serial();
+
 	std::random_device rd;
 	std::mt19937 g(rd());
 
