@@ -4,13 +4,13 @@
 // X Display it in the terminal
 // X Allow selecting an index and return the legal moves for it
 // X Move performing
-// Win checking
+// ~ Win checking
 
 // Threefold repeat checking(?)
 
-// NEAT algorithm
+// ~ NEAT algorithm
 // Connect it to solitaire
-// Save the progress over time for later viewing
+// X Save the progress over time for later viewing
 // Animate the AI playing solitaire
 
 // 7x19 for the main board
@@ -391,13 +391,33 @@ void random_player(RNG& gen, Board& board) {
 	}
 }
 
-void run_robot(Robot<Board::END_IDX - 1, 2>& rob, Board b, size_t num_turns) {
-	// TODO
+void run_robot(Robot<Board::END_IDX, 2>& robot, Board board, size_t num_turns) {
+	for (int i = 0; i < num_turns; ++i) {
+		std::vector<double> board_arr{};
+
+		for (size_t i = 0; i < Board::END_IDX; ++i) {
+			board_arr.push_back(board.cindex(i).get_rep_num());
+		}
+
+		robot.set_inputs(board_arr);
+
+		robot.backprop();
+
+		std::cout << robot.outputs << "\n";
+
+		size_t idx_a = std::clamp(robot.outputs[0].value, 0.0, (double)(Board::END_IDX - 1));
+		size_t idx_b = std::clamp(robot.outputs[1].value, 0.0, (double)(Board::END_IDX - 1));
+		std::cout << ", indices: " << idx_a << ", " << idx_b << "\n";
+		if (board.is_legal_move(idx_a, idx_b)) {
+			board.perform_move(idx_a, idx_b);
+		}
+		std::cout << board << "\n";
+	}
 }
 
 int main() {
-	test_node_serial();
-	test_robot_serial();
+	// test_node_serial();
+	// test_robot_serial();
 
 	std::random_device rd;
 	std::mt19937 g(rd());
@@ -410,31 +430,35 @@ int main() {
 
 	std::cout << board << "\n";
 
+	// random_player(g, board);
+
 	Robot<Board::END_IDX, 2> robot{g};
 
-	std::vector<double> board_arr{};
+	// run_robot(robot, board, 100);
 
-	for (size_t i = 0; i < Board::END_IDX; ++i) {
-		board_arr.push_back(board.cindex(i).get_rep_num());
-	}
+	// std::vector<double> board_arr{};
 
-	robot.set_inputs(board_arr);
+	// for (size_t i = 0; i < Board::END_IDX; ++i) {
+	// 	board_arr.push_back(board.cindex(i).get_rep_num());
+	// }
 
-	robot.backprop();
+	// robot.set_inputs(board_arr);
 
-	std::cout << robot.outputs << "\n";
+	// robot.backprop();
+
+	// std::cout << robot.outputs << "\n";
 
 	for (int i = 0; i < 100; ++i) {
 		robot.mutate(g);
-		robot.backprop();
-		std::cout << robot.outputs << "\n";
+		// robot.backprop();
+		// std::cout << robot.outputs << "\n";
 	}
+
+	run_robot(robot, board, 100);
 
 	std::cout << robot.nodes.size() << "\n";
 
 	std::cout << robot << "\n";
-
-	// random_player(g, board);
 
 	std::cout << board.draw_pile.cards << "\n";
 
