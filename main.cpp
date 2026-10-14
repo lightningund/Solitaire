@@ -446,7 +446,7 @@ void run_robot(Robot& robot, Board& board, size_t num_turns, RNG& gen) {
 }
 
 void evolution() {
-	const size_t pop_size = 1000;
+	const size_t pop_size = 10000;
 	// How many times we duplicate the surviving members
 	// This dictates the survival percentage
 	// So 2 would be the top 50%, and 10 would be the top 10%
@@ -454,16 +454,19 @@ void evolution() {
 	const double cutoff = 1.0 / duplicates;
 	const size_t num_saved = pop_size * cutoff;
 
+	// The number of different board deals we try on each robot each time
+	const size_t num_runs = 10;
+
 	const size_t turns = 100;
 	const size_t generations = 200;
 
 	std::random_device random_dev;
 	std::mt19937 gen(random_dev());
 
-	std::array<Robot, pop_size> robots{};
+	std::vector<Robot> robots{};
 
-	for (auto& robot : robots) {
-		robot = Robot(gen);
+	for (int i = 0; i < pop_size; ++i) {
+		robots.push_back(Robot(gen));
 	}
 
 	// Assumes the robots list is already sorted
@@ -482,26 +485,25 @@ void evolution() {
 		// X Filter the best
 		// X Duplicate and mutate
 
-	for (int i = 0; i < generations; ++i) {
-		Deck deck{};
-		deck.shuffle(gen);
-
-		Board board{};
-		board.deal(deck);
-
+	for (int generation = 0; generation < generations; ++generation) {
 		// TODO: Parallelize
 		for (auto& robot : robots) {
 			robot.score = 0;
-			auto temp_board = board;
-			run_robot(robot, temp_board, turns, gen);
-			robot.score = temp_board.score();
+			Board board;
+			for (int j = 0; j < num_runs; ++j) {
+				Deck deck{};
+				deck.shuffle(gen);
+				board.deal(deck);
+				run_robot(robot, board, turns, gen);
+				robot.score = board.score();
+			}
 		}
 
 		std::sort(robots.begin(), robots.end(), [](auto& a, auto& b) {
 			return a.score > b.score;
 		});
 
-		std::cout << "Best robot of generation " << i << ": ";
+		std::cout << "Best robot of generation " << generation << ": ";
 		robots[0].serialize(std::cout);
 		std::cout << "\nWith a score of: " << robots[0].score << "\n\n";
 	}

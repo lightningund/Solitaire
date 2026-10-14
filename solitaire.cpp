@@ -539,6 +539,8 @@ size_t Board::num_face_up() const {
 		}
 	}
 
+	num += flipped.size() - 1;
+
 	return num;
 }
 
