@@ -223,14 +223,14 @@ struct Robot {
 			// Change node bias
 			// TODO: Remove connection?
 			// TODO: Remove node?
-		const double WEIGHT_CHANCE = 0.4;
-		const double BIAS_CHANCE = 0.5;
-		const double CONNECTION_CHANCE = 0.3;
-		const double NODE_CHANCE = 0.3;
+		// const double WEIGHT_CHANCE = 0.4;
+		// const double BIAS_CHANCE = 0.5;
+		// const double CONNECTION_CHANCE = 0.3;
+		// const double NODE_CHANCE = 0.3;
 
 		std::uniform_real_distribution<> prob_dist{0, 1};
 
-		if (prob_dist(gen) < WEIGHT_CHANCE) {
+		// if (prob_dist(gen) < WEIGHT_CHANCE) {
 			std::cout << "Modifying connection weight\n";
 			Node* node = select_dst_node(gen);
 
@@ -242,11 +242,11 @@ struct Robot {
 				std::uniform_real_distribution<> weight_dist{-0.1, 0.1};
 				node->cons[con_idx].weight += weight_dist(gen);
 			}
-		} else if (prob_dist(gen) < BIAS_CHANCE) {
+		// } else if (prob_dist(gen) < BIAS_CHANCE) {
 			std::cout << "Modifying node bias\n";
 			std::uniform_real_distribution<> bias_dist{-0.1, 0.1};
 			select_any_node(gen)->bias += bias_dist(gen);
-		} else if (prob_dist(gen) < CONNECTION_CHANCE) {
+		// } else if (prob_dist(gen) < CONNECTION_CHANCE) {
 			std::cout << "Adding new connection\n";
 			auto src = select_src_idx(gen);
 			Node* dst = select_dst_node(gen);
@@ -255,7 +255,7 @@ struct Robot {
 				0, // TODO Weight
 				src
 			});
-		} else if (prob_dist(gen) < NODE_CHANCE) {
+		// } else if (prob_dist(gen) < NODE_CHANCE) {
 			std::cout << "Adding new node\n";
 			std::uniform_int_distribution<> out_distrib{0, num_output - 1};
 			nodes.push_back(Node{});
@@ -263,7 +263,7 @@ struct Robot {
 				1, // TODO Bias
 				num_input + nodes.size() - 1
 			});
-		}
+		// }
 	}
 
 	// First N will be inputs, then the next amount will be outputs
@@ -406,7 +406,7 @@ void run_robot(Robot& robot, Board& board, size_t num_turns, RNG& gen) {
 		return value > (double)(Board::END_IDX - 1) || value < 0;
 	};
 
-	// Incl. Randomness
+	// // Incl. Randomness
 	// auto pick_move = [&](double value) -> size_t {
 	// 	// If the robot outputs out of range, just pick a random value
 	// 	// This might not be the best for learning, but it will make things more interesting
@@ -455,7 +455,7 @@ void evolution() {
 	const size_t num_saved = pop_size * cutoff;
 
 	const size_t turns = 100;
-	const size_t generations = 20;
+	const size_t generations = 200;
 
 	std::random_device random_dev;
 	std::mt19937 gen(random_dev());
