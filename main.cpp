@@ -397,7 +397,31 @@ void random_player(RNG& gen, Board& board) {
 	}
 }
 
-void run_robot(Robot& robot, Board& board, size_t num_turns) {
+template <typename RNG>
+void run_robot(Robot& robot, Board& board, size_t num_turns, RNG& gen) {
+	std::uniform_int_distribution<> idx_distrib{0, Board::END_IDX - 1};
+
+	// If the robot node value is out of bounds
+	auto out_of_bounds = [](double value) {
+		return value > (double)(Board::END_IDX - 1) || value < 0;
+	};
+
+	// Incl. Randomness
+	// auto pick_move = [&](double value) -> size_t {
+	// 	// If the robot outputs out of range, just pick a random value
+	// 	// This might not be the best for learning, but it will make things more interesting
+	// 	if (out_of_bounds(value)) {
+	// 		return idx_distrib(gen);
+	// 	} else {
+	// 		return std::clamp(value, 0.0, (double)(Board::END_IDX - 1));
+	// 	}
+	// };
+
+	// Just clamps
+	auto pick_move = [&](double value) -> size_t {
+		return std::clamp(value, 0.0, (double)(Board::END_IDX - 1));
+	};
+
 	for (int i = 0; i < num_turns; ++i) {
 		std::vector<double> board_arr{};
 
@@ -407,13 +431,12 @@ void run_robot(Robot& robot, Board& board, size_t num_turns) {
 
 		robot.set_inputs(board_arr);
 
-		// TODO: Add some randomness so we don't just get stuck?
 		robot.backprop();
 
 		// std::cout << robot.outputs << "\n";
 
-		size_t idx_a = std::clamp(robot.outputs[0].value, 0.0, (double)(Board::END_IDX - 1));
-		size_t idx_b = std::clamp(robot.outputs[1].value, 0.0, (double)(Board::END_IDX - 1));
+		size_t idx_a = pick_move(robot.outputs[0].value);
+		size_t idx_b = pick_move(robot.outputs[1].value);
 		// std::cout << ", indices: " << idx_a << ", " << idx_b << "\n";
 		if (board.is_legal_move(idx_a, idx_b)) {
 			board.perform_move(idx_a, idx_b);
@@ -431,8 +454,8 @@ void evolution() {
 	const double cutoff = 1.0 / duplicates;
 	const size_t num_saved = pop_size * cutoff;
 
-	const size_t turns = 300;
-	const size_t generations = 100;
+	const size_t turns = 100;
+	const size_t generations = 20;
 
 	std::random_device random_dev;
 	std::mt19937 gen(random_dev());
@@ -466,10 +489,11 @@ void evolution() {
 		Board board{};
 		board.deal(deck);
 
+		// TODO: Parallelize
 		for (auto& robot : robots) {
 			robot.score = 0;
 			auto temp_board = board;
-			run_robot(robot, temp_board, turns);
+			run_robot(robot, temp_board, turns, gen);
 			robot.score = temp_board.score();
 		}
 

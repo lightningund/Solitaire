@@ -525,7 +525,7 @@ bool Board::has_won() const {
 size_t Board::num_ace_cards() const {
 	size_t num = 0;
 	for (size_t i = 0; i < 4; ++i) {
-		num += aces[i].size();
+		num += aces[i].size() - 1;
 	}
 
 	return num;
