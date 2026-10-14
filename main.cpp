@@ -18,6 +18,7 @@
 // deck
 // turned card
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <random>
@@ -147,7 +148,7 @@ struct Robot {
 		n.value = n.bias;
 		for (auto& con : n.cons) {
 			auto back = get_src_node(con.backtarget);
-			backprop(back);
+			if (!back.propagated) backprop(back);
 
 			// TODO: Add activation function
 			n.value += back.value * con.weight;
@@ -188,29 +189,50 @@ struct Robot {
 		return src_distrib(gen);
 	}
 
-	template <typename RNG>
-	Node* select_dst_node(RNG& gen) {
-		std::uniform_int_distribution<> dst_distrib{0, static_cast<int>(num_output + nodes.size() - 1)};
-		int dst_idx = dst_distrib(gen);
-
-		if (dst_idx < num_output) {
-			return &outputs[dst_idx];
+	Node& get_dst_node(size_t idx) {
+		if (idx < num_output) {
+			return outputs[idx];
 		} else {
-			return &nodes[dst_idx - num_output];
+			return nodes[idx - num_output];
+		}
+	}
+	const Node& get_dst_node(size_t idx) const {
+		if (idx < num_output) {
+			return outputs[idx];
+		} else {
+			return nodes[idx - num_output];
 		}
 	}
 
 	template <typename RNG>
-	Node* select_any_node(RNG& gen) {
+	size_t select_dst_idx(RNG& gen) {
+		std::uniform_int_distribution<> src_distrib{0, static_cast<int>(num_output + nodes.size() - 1)};
+		return src_distrib(gen);
+	}
+
+	template <typename RNG>
+	Node& select_dst_node(RNG& gen) {
+		std::uniform_int_distribution<> dst_distrib{0, static_cast<int>(num_output + nodes.size() - 1)};
+		int dst_idx = dst_distrib(gen);
+
+		if (dst_idx < num_output) {
+			return outputs[dst_idx];
+		} else {
+			return nodes[dst_idx - num_output];
+		}
+	}
+
+	template <typename RNG>
+	Node& select_any_node(RNG& gen) {
 		std::uniform_int_distribution<> idx_distrib{0, static_cast<int>(num_input + num_output + nodes.size() - 1)};
 		int idx = idx_distrib(gen);
 
 		if (idx < num_output) {
-			return &outputs[idx];
+			return outputs[idx];
 		} else if (idx < num_output + num_input) {
-			return &inputs[idx - num_output];
+			return inputs[idx - num_output];
 		} else {
-			return &nodes[idx - num_output - num_input];
+			return nodes[idx - num_output - num_input];
 		}
 	}
 
@@ -223,47 +245,57 @@ struct Robot {
 			// Change node bias
 			// TODO: Remove connection?
 			// TODO: Remove node?
-		// const double WEIGHT_CHANCE = 0.4;
-		// const double BIAS_CHANCE = 0.5;
-		// const double CONNECTION_CHANCE = 0.3;
-		// const double NODE_CHANCE = 0.3;
+		const double WEIGHT_CHANCE = 0.4;
+		const double BIAS_CHANCE = 0.5;
+		const double CONNECTION_CHANCE = 0.3;
+		const double NODE_CHANCE = 0.3;
 
 		std::uniform_real_distribution<> prob_dist{0, 1};
 
-		// if (prob_dist(gen) < WEIGHT_CHANCE) {
-			std::cout << "Modifying connection weight\n";
-			Node* node = select_dst_node(gen);
+		if (prob_dist(gen) < WEIGHT_CHANCE) {
+			// std::cout << "Modifying connection weight\n";
+			auto& node = select_dst_node(gen);
 
-			if (!node->cons.empty()) {
+			if (!node.cons.empty()) {
 				// Select the connection within the node
-				std::uniform_int_distribution<> con_distrib{0, static_cast<int>(node->cons.size() - 1)};
+				std::uniform_int_distribution<> con_distrib{0, static_cast<int>(node.cons.size() - 1)};
 				int con_idx = con_distrib(gen);
 
 				std::uniform_real_distribution<> weight_dist{-0.1, 0.1};
-				node->cons[con_idx].weight += weight_dist(gen);
+				node.cons[con_idx].weight += weight_dist(gen);
 			}
-		// } else if (prob_dist(gen) < BIAS_CHANCE) {
-			std::cout << "Modifying node bias\n";
+		} else if (prob_dist(gen) < BIAS_CHANCE) {
+			// std::cout << "Modifying node bias\n";
 			std::uniform_real_distribution<> bias_dist{-0.1, 0.1};
-			select_any_node(gen)->bias += bias_dist(gen);
-		// } else if (prob_dist(gen) < CONNECTION_CHANCE) {
-			std::cout << "Adding new connection\n";
+			select_any_node(gen).bias += bias_dist(gen);
+		} else if (prob_dist(gen) < CONNECTION_CHANCE) {
+			// std::cout << "Adding new connection\n";
 			auto src = select_src_idx(gen);
-			Node* dst = select_dst_node(gen);
+			auto dst = select_dst_idx(gen);
 
-			dst->cons.push_back(Connection {
-				0, // TODO Weight
-				src
-			});
-		// } else if (prob_dist(gen) < NODE_CHANCE) {
-			std::cout << "Adding new node\n";
+			auto src_node = get_src_node(src);
+			auto dst_node = get_dst_node(dst);
+
+			// Only add it if there isn't already a link in the other direction
+			if (
+				std::find_if(src_node.cons.begin(), src_node.cons.end(), [&](Connection& con) {
+					return con.backtarget == dst;
+				}) == src_node.cons.end()
+			) {
+				dst_node.cons.push_back(Connection {
+					0, // TODO Weight
+					src
+				});
+			}
+		} else if (prob_dist(gen) < NODE_CHANCE) {
+			// std::cout << "Adding new node\n";
 			std::uniform_int_distribution<> out_distrib{0, num_output - 1};
 			nodes.push_back(Node{});
-			select_dst_node(gen)->cons.push_back(Connection {
+			select_dst_node(gen).cons.push_back(Connection {
 				1, // TODO Bias
 				num_input + nodes.size() - 1
 			});
-		// }
+		}
 	}
 
 	// First N will be inputs, then the next amount will be outputs
@@ -431,6 +463,11 @@ void run_robot(Robot& robot, Board& board, size_t num_turns, RNG& gen) {
 
 		robot.set_inputs(board_arr);
 
+		// std::cout << "\r";
+		// for (auto& n : robot.nodes) {
+		// 	n.serialize(std::cout);
+		// }
+
 		robot.backprop();
 
 		// std::cout << robot.outputs << "\n";
@@ -457,7 +494,7 @@ void evolution() {
 	// The number of different board deals we try on each robot each time
 	const size_t num_runs = 10;
 
-	const size_t turns = 100;
+	const size_t turns = 20;
 	const size_t generations = 200;
 
 	std::random_device random_dev;
@@ -466,7 +503,8 @@ void evolution() {
 	std::vector<Robot> robots{};
 
 	for (int i = 0; i < pop_size; ++i) {
-		robots.push_back(Robot(gen));
+		// robots.push_back(Robot(gen));
+		robots.push_back(Robot{});
 	}
 
 	// Assumes the robots list is already sorted
@@ -487,7 +525,8 @@ void evolution() {
 
 	for (int generation = 0; generation < generations; ++generation) {
 		// TODO: Parallelize
-		for (auto& robot : robots) {
+		for (size_t i = 0; i < pop_size; ++i) {
+			auto& robot = robots[i];
 			robot.score = 0;
 			Board board;
 			for (int j = 0; j < num_runs; ++j) {
@@ -495,13 +534,22 @@ void evolution() {
 				deck.shuffle(gen);
 				board.deal(deck);
 				run_robot(robot, board, turns, gen);
-				robot.score = board.score();
+				robot.score += board.score();
 			}
+
+			// if (i % 100 == 0) {
+				// std::cout << 100.0 * (float)i / pop_size << "%\r";
+			// }
 		}
+
+		// Shuffle the population so that ones with the same score get moved around
+		std::shuffle(robots.begin(), robots.end(), gen);
 
 		std::sort(robots.begin(), robots.end(), [](auto& a, auto& b) {
 			return a.score > b.score;
 		});
+
+		duplicate_best();
 
 		std::cout << "Best robot of generation " << generation << ": ";
 		robots[0].serialize(std::cout);
