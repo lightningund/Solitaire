@@ -9,9 +9,9 @@
 // Threefold repeat checking(?)
 
 // ~ NEAT algorithm
-// Connect it to solitaire
+// X Connect it to solitaire
 // X Save the progress over time for later viewing
-// Animate the AI playing solitaire
+// ~ Animate the AI playing solitaire
 
 // 7x19 for the main board
 // 4 aces
@@ -105,27 +105,33 @@ void test_node_serial() {
 	std::cout << "\n";
 }
 
-template <size_t num_input, size_t num_output>
 struct Robot {
+	static constexpr size_t num_input = Board::END_IDX - 1;
+	static constexpr size_t num_output = 2;
+
 	std::array<Node, num_input> inputs{};
 	std::array<Node, num_output> outputs{};
 	std::vector<Node> nodes{};
+
+	double score = 0;
+
+	Robot() {}
 
 	template <typename RNG>
 	Robot(RNG& gen) {
 		std::uniform_real_distribution<> prob_dist{0, 1};
 		std::uniform_real_distribution<> weight_dist{-1, 1};
 		// Randomly connects the outputs to the inputs
-		// for (auto& outnode : outputs) {
-		// 	for (size_t i = 0; i < num_input; ++i) {
-		// 		if (prob_dist(gen) > 0.5) {
-		// 			outnode.cons.push_back(Connection {
-		// 				weight_dist(gen),
-		// 				i
-		// 			});
-		// 		}
-		// 	}
-		// }
+		for (auto& outnode : outputs) {
+			for (size_t i = 0; i < num_input; ++i) {
+				if (prob_dist(gen) > 0.5) {
+					outnode.cons.push_back(Connection {
+						weight_dist(gen),
+						i
+					});
+				}
+			}
+		}
 	}
 
 	void set_inputs(std::span<double> vals) {
@@ -325,7 +331,7 @@ void test_robot_serial() {
 	std::random_device rd;
 	std::mt19937 g(rd());
 
-	Robot<Board::END_IDX, 2> robot{g};
+	Robot robot{g};
 
 	std::stringstream ss{};
 
@@ -334,7 +340,7 @@ void test_robot_serial() {
 	robot.serialize(ss);
 	ss.seekg(0, std::ios::beg);
 
-	Robot<Board::END_IDX, 2> remade{g};
+	Robot remade{g};
 	ss >> remade;
 
 	remade.serialize(std::cout);
@@ -350,7 +356,7 @@ void test_robot_serial() {
 	robot.serialize(ss2);
 	ss2.seekg(0, std::ios::beg);
 
-	Robot<Board::END_IDX, 2> remade2{g};
+	Robot remade2{g};
 	ss2 >> remade2;
 
 	remade2.serialize(std::cout);
@@ -391,7 +397,7 @@ void random_player(RNG& gen, Board& board) {
 	}
 }
 
-void run_robot(Robot<Board::END_IDX, 2>& robot, Board board, size_t num_turns) {
+void run_robot(Robot& robot, Board& board, size_t num_turns) {
 	for (int i = 0; i < num_turns; ++i) {
 		std::vector<double> board_arr{};
 
@@ -401,17 +407,79 @@ void run_robot(Robot<Board::END_IDX, 2>& robot, Board board, size_t num_turns) {
 
 		robot.set_inputs(board_arr);
 
+		// TODO: Add some randomness so we don't just get stuck?
 		robot.backprop();
 
-		std::cout << robot.outputs << "\n";
+		// std::cout << robot.outputs << "\n";
 
 		size_t idx_a = std::clamp(robot.outputs[0].value, 0.0, (double)(Board::END_IDX - 1));
 		size_t idx_b = std::clamp(robot.outputs[1].value, 0.0, (double)(Board::END_IDX - 1));
-		std::cout << ", indices: " << idx_a << ", " << idx_b << "\n";
+		// std::cout << ", indices: " << idx_a << ", " << idx_b << "\n";
 		if (board.is_legal_move(idx_a, idx_b)) {
 			board.perform_move(idx_a, idx_b);
 		}
-		std::cout << board << "\n";
+		// std::cout << board << "\n";
+	}
+}
+
+void evolution() {
+	const size_t pop_size = 1000;
+	// How many times we duplicate the surviving members
+	// This dictates the survival percentage
+	// So 2 would be the top 50%, and 10 would be the top 10%
+	const size_t duplicates = 10;
+	const double cutoff = 1.0 / duplicates;
+	const size_t num_saved = pop_size * cutoff;
+
+	const size_t turns = 300;
+	const size_t generations = 100;
+
+	std::random_device random_dev;
+	std::mt19937 gen(random_dev());
+
+	std::array<Robot, pop_size> robots{};
+
+	for (auto& robot : robots) {
+		robot = Robot(gen);
+	}
+
+	// Assumes the robots list is already sorted
+	auto duplicate_best = [&]() {
+		for (size_t i = 0; i < num_saved; ++i) {
+			for (size_t j = 0; j < duplicates; ++j) {
+				robots[i + j * duplicates] = robots[i];
+				robots[i + j * duplicates].mutate(gen);
+			}
+		}
+	};
+
+	// Loop for number of generations
+		// X Run each robot
+		// Save some stats
+		// X Filter the best
+		// X Duplicate and mutate
+
+	for (int i = 0; i < generations; ++i) {
+		Deck deck{};
+		deck.shuffle(gen);
+
+		Board board{};
+		board.deal(deck);
+
+		for (auto& robot : robots) {
+			robot.score = 0;
+			auto temp_board = board;
+			run_robot(robot, temp_board, turns);
+			robot.score = temp_board.score();
+		}
+
+		std::sort(robots.begin(), robots.end(), [](auto& a, auto& b) {
+			return a.score > b.score;
+		});
+
+		std::cout << "Best robot of generation " << i << ": ";
+		robots[0].serialize(std::cout);
+		std::cout << "\nWith a score of: " << robots[0].score << "\n\n";
 	}
 }
 
@@ -419,48 +487,29 @@ int main() {
 	// test_node_serial();
 	// test_robot_serial();
 
-	std::random_device rd;
-	std::mt19937 g(rd());
+	// std::random_device rd;
+	// std::mt19937 g(rd());
 
-	Deck deck{};
-	deck.shuffle(g);
+	// Deck deck{};
+	// deck.shuffle(g);
 
-	Board board{};
-	board.deal(deck);
+	// Board board{};
+	// board.deal(deck);
 
-	std::cout << board << "\n";
+	// std::cout << board << "\n";
 
 	// random_player(g, board);
 
-	Robot<Board::END_IDX, 2> robot{g};
-
-	// run_robot(robot, board, 100);
-
-	// std::vector<double> board_arr{};
-
-	// for (size_t i = 0; i < Board::END_IDX; ++i) {
-	// 	board_arr.push_back(board.cindex(i).get_rep_num());
+	// Robot robot{g};
+	// for (int i = 0; i < 100; ++i) {
+	// 	robot.mutate(g);
 	// }
 
-	// robot.set_inputs(board_arr);
+	// run_robot(robot, board, 100);
+	// std::cout << robot << "\n";
+	// std::cout << board.draw_pile.cards << "\n";
 
-	// robot.backprop();
-
-	// std::cout << robot.outputs << "\n";
-
-	for (int i = 0; i < 100; ++i) {
-		robot.mutate(g);
-		// robot.backprop();
-		// std::cout << robot.outputs << "\n";
-	}
-
-	run_robot(robot, board, 100);
-
-	std::cout << robot.nodes.size() << "\n";
-
-	std::cout << robot << "\n";
-
-	std::cout << board.draw_pile.cards << "\n";
+	evolution();
 
 	return 0;
 }
