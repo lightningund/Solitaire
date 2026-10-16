@@ -77,3 +77,41 @@
 					- Destination is empty
 					- The moving card is not one rank higher than the destination
 					- The moving card does not match the suit of the destination
+
+# Move Performing
+- Legal move types:
+	1) Opposing suit card on to next higher number:
+		- Effects:
+			- The moving card goes to the indicated slot
+			- If the card behind the moving card is face down, flip it up
+			- If the moving card has other cards below it, move them too
+	2) King to empty column:
+		- Effects:
+			- The moving card goes to the indicated slot
+			- If the card behind the moving card is face down, flip it up
+			- If the moving card has other cards below it, move them too
+	3) Ace to empty Ace Slot:
+		- Effects:
+			- The moving card goes to the indicated slot
+			- If the card behind the moving card is face down, flip it up
+	4) Card to Ace Slot:
+		- Effects:
+			- The moving card goes to the indicated slot
+			- If the card behind the moving card is face down, flip it up
+	5) Turn over card from deck:
+		- Effects:
+			- The top card of the draw pile is put into the flip pile
+	6) Put flipped pile back into deck:
+		- Effects:
+			- The entire flip pile is put back into the draw pile
+
+- Check Plan:
+	- If the source is the deck
+		- Either draw or reset it
+	- Move the card to the destination
+	- If the source was an ace or the flip pile
+		- Pop it off the end
+	- If the source was on the board
+		- Check if there is a card behind to flip
+		- If the destination was also on the board
+			- Move any cards below
