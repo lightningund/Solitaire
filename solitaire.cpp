@@ -282,6 +282,16 @@ struct BoardChecker {
 
 	/// Takes the two columns as parameters
 	bool is_legal_move(size_t src, size_t dst) const {
+		// Missing additional rules:
+			// If the moving card already had a match behind it,
+			//	only allow it if the card behind the moving card has a matching ace
+			//	that is also one rank below
+			// This prevents the AI from just shuffling them back and forth
+			// But still allows shifting them around when you need to get to the ace
+
+			// If the king is already on the top, also illegal
+			// This prevents the AI from moving it back and forth forever
+
 		if (is_deck(src)) {
 			std::cout << "Clicked on deck\n";
 			return can_click_deck();
@@ -329,71 +339,6 @@ struct BoardChecker {
 bool Board::is_legal_move(size_t src, size_t dst) const {
 	BoardChecker bc{*this};
 	return bc.is_legal_move(src, dst);
-
-	// if (is_deck(src)) {
-	// 	return can_click_deck();
-	// } else {
-	// 	if (is_empty(src)) return false;
-	// 	if (is_deck(dst)) return false;
-	// 	if (is_flip_pile(dst)) return false;
-
-	// 	if (is_board(dst)) {
-	// 		if (!is_empty(dst)) return false;
-	// 		if (is_king(src)) {
-	// 			if (!is_top_row(dst)) return false;
-	// 			// ADDITIONAL STIPULATION:
-	// 			// If the king is already on the top, also illegal
-	// 			// This prevents the AI from moving it back and forth forever
-	// 			if (is_board(src) && is_top_row(src)) return false;
-
-	// 			return true;
-	// 		} else {
-	// 			if (is_top_row(dst)) return false;
-	// 			if (is_empty(one_above(dst))) return false;
-	// 			if (is_same_color(src, one_above(dst))) return false;
-	// 			if (get_rank(src) + 1 != get_rank(one_above(dst))) return false;
-
-	// 			// ADDITIONAL STIPULATION:
-	// 			// If the moving card already had a match behind it,
-	// 			//	only allow it if the card behind the moving card has a matching ace
-	// 			//	that is also one rank below
-	// 			// This prevents the AI from just shuffling them back and forth
-	// 			// But still allows shifting them around when you need to get to the ace
-	// 			if (is_board(src) && get_rank(src) + 1 == get_rank(one_above(src))) {
-	// 				auto target_suit = get_suit(one_above(src));
-	// 				auto target_rank = get_rank(one_above(src)) - 1;
-	// 				bool ace_match = false;
-	// 				for (size_t i = 0; i < 4; ++i) {
-	// 					if (get_suit(get_ace(i)) == target_suit && get_rank(get_ace(i)) == target_rank) {
-	// 						ace_match = true;
-	// 						break;
-	// 					}
-	// 				}
-
-	// 				if (!ace_match) return false;
-	// 			}
-
-	// 			return true;
-	// 		}
-	// 	} else {
-	// 		// ADDITIONAL STIPULATION:
-	// 		// Prevent moving an ace between slots
-	// 		if (is_ace_slot(src)) return false;
-	// 		if (is_board(src) && !is_bottom_row(src) && !is_empty(one_below(src))) return false;
-
-	// 		if (is_ace(src)) {
-	// 			if (!is_empty(dst)) return false;
-
-	// 			return true;
-	// 		} else {
-	// 			if (is_empty(dst)) return false;
-	// 			if (get_rank(src) != get_rank(dst) + 1) return false;
-	// 			if (get_suit(src) != get_suit(dst)) return false;
-
-	// 			return true;
-	// 		}
-	// 	}
-	// }
 }
 
 void Board::perform_move(size_t src, size_t dst) {
@@ -401,33 +346,57 @@ void Board::perform_move(size_t src, size_t dst) {
 
 	BoardChecker bc{*this};
 
-	// TODO
-	// if (bc.is_deck(src)) {
-	// 	draw_from_deck();
-	// } else {
-	// 	move_card(src, dst);
+	if (bc.is_deck(src)) {
+		draw_from_deck();
+		return;
+	}
 
-	// 	if (bc.is_ace_slot(src) || bc.is_flip_pile(src)) {
-	// 		pop_card(src);
-	// 	} else if (is_board(src)) {
-	// 		if (!is_top_row(src) && is_face_down(one_above(src))) {
-	// 			flip_card(one_above(src));
-	// 		}
+	if (bc.is_board(src)) {
+		if (bc.is_board(dst)) {
+			const auto target = bc.get_last_card(dst);
+			const auto col = bc.get_board_column(src);
 
-	// 		if (is_board(dst)) {
-	// 			auto temp_a = src;
-	// 			auto temp_b = dst;
-	// 			while (!is_bottom_row(temp_a)) {
-	// 				temp_a = one_below(temp_a);
-	// 				temp_b = one_below(temp_b);
+			for (size_t i = 0; i < col.size(); ++i) {
+				const Card& c = col[i];
+				if (c.empty() || c.face_down) continue;
+				if (bc.can_go_under(c, target)) {
+					// Move the rest of the vector from one column to the other
+					// if the last card was face down then flip it
+				}
+			}
 
-	// 				if (is_empty(temp_a)) break;
+			return;
+		}
+	}
 
-	// 				move_card(temp_a, temp_b);
-	// 			}
-	// 		}
-	// 	}
-	// }
+	move_card(src, dst);
+	// if src is an ace or the flip pile, then pop it
+
+	if (bc.is_deck(src)) {
+	} else {
+		move_card(src, dst);
+
+		if (bc.is_ace_slot(src) || bc.is_flip_pile(src)) {
+			pop_card(src);
+		} else if (is_board(src)) {
+			if (!is_top_row(src) && is_face_down(one_above(src))) {
+				flip_card(one_above(src));
+			}
+
+			if (is_board(dst)) {
+				auto temp_a = src;
+				auto temp_b = dst;
+				while (!is_bottom_row(temp_a)) {
+					temp_a = one_below(temp_a);
+					temp_b = one_below(temp_b);
+
+					if (is_empty(temp_a)) break;
+
+					move_card(temp_a, temp_b);
+				}
+			}
+		}
+	}
 }
 
 bool Board::has_won() const {
