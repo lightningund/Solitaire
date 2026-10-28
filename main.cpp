@@ -421,7 +421,7 @@ void random_player(RNG& gen, Board& board) {
 	// Exclude the deck
 	std::uniform_int_distribution<> idx_distrib{1, Board::END_IDX - 1};
 
-	for (int i = 0; i < 1000; ++i) {
+	for (int i = 0; i < 100; ++i) {
 		size_t tries = 0;
 		size_t idx_a = 0;
 		size_t idx_b = 0;
@@ -433,7 +433,7 @@ void random_player(RNG& gen, Board& board) {
 			std::cout << tries << "\r";
 
 			// Failsafe for if we don't have any legal moves
-			if (tries > 50000) {
+			if (tries > 5000) {
 				idx_a = Board::DECK_IDX;
 				break;
 			}
@@ -593,9 +593,9 @@ int main() {
 	Board board{};
 	board.deal(deck);
 
-	console_player(board);
+	// console_player(board);
 
-	// random_player(g, board);
+	random_player(g, board);
 
 	// Robot robot{g};
 	// for (int i = 0; i < 100; ++i) {
