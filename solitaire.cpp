@@ -243,137 +243,105 @@ bool Board::is_same_color(size_t idx_a, size_t idx_b) const {
 // Test all the internal sub-functions with toy setups
 // Test a whole bunch of premade boards to ensure that the set of legal moves are correct
 // I miss rust's testing suite
-bool Board::is_legal_move(size_t idx_a, size_t idx_b) const {
-	// Check order plan:
-		// First click on deck:
-			// Second idx doesn't matter
-			// Can only be 5) or 6)
-		// Otherwise:
-			// Instant DQs:
-				// Moving card is empty
-				// Moving card is face down
-				// Destination is deck
-				// Destination is flip pile
-			// If the destination is on the board:
-				// Instant DQs:
-					// Destination is not empty
-				// If moving card is a King:
-					// Instant DQs:
-						// Destination is not in the top row
-				// Otherwise:
-					// Instant DQs:
-						// Destination is in the top row
-						// Card one above the destination is empty
-						// Card one above the destination is not the opposite color suit of the moving card
-						// Card one above the destination is not one rank higher than the moving card
-			// Otherwise (ace destination):
-				// Instant DQs:
-					// Moving card has cards under it
-				// If moving card is an ace:
-					// Instant DQs:
-						// Destination is not empty
-				// Otherwise:
-					// Instant DQs:
-						// Destination is empty
-						// The moving card is not one rank higher than the destination
-						// The moving card does not match the suit of the destination
 
-	if (is_deck(idx_a)) {
+/// Takes the two columns as parameters
+bool Board::is_legal_move(size_t src, size_t dst) const {
+	if (is_deck(src)) {
 		return can_click_deck();
-	} else {
-		if (is_empty(idx_a)) return false;
-		if (is_face_down(idx_a)) return false;
-		if (is_deck(idx_b)) return false;
-		if (is_flip_pile(idx_b)) return false;
+	}
 
-		if (is_board(idx_b)) {
-			if (!is_empty(idx_b)) return false;
-			if (is_king(idx_a)) {
-				if (!is_top_row(idx_b)) return false;
-				// ADDITIONAL STIPULATION:
-				// If the king is already on the top, also illegal
-				// This prevents the AI from moving it back and forth forever
-				if (is_board(idx_a) && is_top_row(idx_a)) return false;
+	if (is_board(dst)) {
+		const auto target = get_bottom_column_card(dst);
 
-				return true;
-			} else {
-				if (is_top_row(idx_b)) return false;
-				if (is_empty(one_above(idx_b))) return false;
-				if (is_same_color(idx_a, one_above(idx_b))) return false;
-				if (get_rank(idx_a) + 1 != get_rank(one_above(idx_b))) return false;
-
-				// ADDITIONAL STIPULATION:
-				// If the moving card already had a match behind it,
-				//	only allow it if the card behind the moving card has a matching ace
-				//	that is also one rank below
-				// This prevents the AI from just shuffling them back and forth
-				// But still allows shifting them around when you need to get to the ace
-				if (is_board(idx_a) && get_rank(idx_a) + 1 == get_rank(one_above(idx_a))) {
-					auto target_suit = get_suit(one_above(idx_a));
-					auto target_rank = get_rank(one_above(idx_a)) - 1;
-					bool ace_match = false;
-					for (size_t i = 0; i < 4; ++i) {
-						if (get_suit(get_ace(i)) == target_suit && get_rank(get_ace(i)) == target_rank) {
-							ace_match = true;
-							break;
-						}
-					}
-
-					if (!ace_match) return false;
-				}
-
-				return true;
-			}
-		} else {
-			// ADDITIONAL STIPULATION:
-			// Prevent moving an ace between slots
-			if (is_ace_slot(idx_a)) return false;
-			if (is_board(idx_a) && !is_bottom_row(idx_a) && !is_empty(one_below(idx_a))) return false;
-
-			if (is_ace(idx_a)) {
-				if (!is_empty(idx_b)) return false;
-
-				return true;
-			} else {
-				if (is_empty(idx_b)) return false;
-				if (get_rank(idx_a) != get_rank(idx_b) + 1) return false;
-				if (get_suit(idx_a) != get_suit(idx_b)) return false;
-
-				return true;
-			}
+		if (is_board(src)) {
+			// TODO
 		}
 	}
+
+	// if (is_deck(src)) {
+	// 	return can_click_deck();
+	// } else {
+	// 	if (is_empty(src)) return false;
+	// 	if (is_deck(dst)) return false;
+	// 	if (is_flip_pile(dst)) return false;
+
+	// 	if (is_board(dst)) {
+	// 		if (!is_empty(dst)) return false;
+	// 		if (is_king(src)) {
+	// 			if (!is_top_row(dst)) return false;
+	// 			// ADDITIONAL STIPULATION:
+	// 			// If the king is already on the top, also illegal
+	// 			// This prevents the AI from moving it back and forth forever
+	// 			if (is_board(src) && is_top_row(src)) return false;
+
+	// 			return true;
+	// 		} else {
+	// 			if (is_top_row(dst)) return false;
+	// 			if (is_empty(one_above(dst))) return false;
+	// 			if (is_same_color(src, one_above(dst))) return false;
+	// 			if (get_rank(src) + 1 != get_rank(one_above(dst))) return false;
+
+	// 			// ADDITIONAL STIPULATION:
+	// 			// If the moving card already had a match behind it,
+	// 			//	only allow it if the card behind the moving card has a matching ace
+	// 			//	that is also one rank below
+	// 			// This prevents the AI from just shuffling them back and forth
+	// 			// But still allows shifting them around when you need to get to the ace
+	// 			if (is_board(src) && get_rank(src) + 1 == get_rank(one_above(src))) {
+	// 				auto target_suit = get_suit(one_above(src));
+	// 				auto target_rank = get_rank(one_above(src)) - 1;
+	// 				bool ace_match = false;
+	// 				for (size_t i = 0; i < 4; ++i) {
+	// 					if (get_suit(get_ace(i)) == target_suit && get_rank(get_ace(i)) == target_rank) {
+	// 						ace_match = true;
+	// 						break;
+	// 					}
+	// 				}
+
+	// 				if (!ace_match) return false;
+	// 			}
+
+	// 			return true;
+	// 		}
+	// 	} else {
+	// 		// ADDITIONAL STIPULATION:
+	// 		// Prevent moving an ace between slots
+	// 		if (is_ace_slot(src)) return false;
+	// 		if (is_board(src) && !is_bottom_row(src) && !is_empty(one_below(src))) return false;
+
+	// 		if (is_ace(src)) {
+	// 			if (!is_empty(dst)) return false;
+
+	// 			return true;
+	// 		} else {
+	// 			if (is_empty(dst)) return false;
+	// 			if (get_rank(src) != get_rank(dst) + 1) return false;
+	// 			if (get_suit(src) != get_suit(dst)) return false;
+
+	// 			return true;
+	// 		}
+	// 	}
+	// }
 }
 
-void Board::perform_move(size_t idx_a, size_t idx_b) {
-	// Check Plan:
-		// If the source is the deck
-			// Either draw or reset it
-		// Move the card to the destination
-		// If the source was an ace or the flip pile
-			// Pop it off the end
-		// If the source was on the board
-			// Check if there is a card behind to flip
-			// If the destination was also on the board
-				// Move any cards below
+void Board::perform_move(size_t src, size_t dst) {
+	if (!is_legal_move(src, dst)) return;
 
-	if (!is_legal_move(idx_a, idx_b)) return;
-
-	if (is_deck(idx_a)) {
+	if (is_deck(src)) {
 		draw_from_deck();
 	} else {
-		move_card(idx_a, idx_b);
+		move_card(src, dst);
 
-		if (is_ace_slot(idx_a) || is_flip_pile(idx_a)) {
-			pop_card(idx_a);
-		} else if (is_board(idx_a)) {
-			if (!is_top_row(idx_a) && is_face_down(one_above(idx_a))) {
-				flip_card(one_above(idx_a));
+		if (is_ace_slot(src) || is_flip_pile(src)) {
+			pop_card(src);
+		} else if (is_board(src)) {
+			if (!is_top_row(src) && is_face_down(one_above(src))) {
+				flip_card(one_above(src));
 			}
 
-			if (is_board(idx_b)) {
-				auto temp_a = idx_a;
-				auto temp_b = idx_b;
+			if (is_board(dst)) {
+				auto temp_a = src;
+				auto temp_b = dst;
 				while (!is_bottom_row(temp_a)) {
 					temp_a = one_below(temp_a);
 					temp_b = one_below(temp_b);

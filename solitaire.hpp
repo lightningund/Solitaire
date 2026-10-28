@@ -176,15 +176,14 @@ struct Board {
 
 	public:
 	static constexpr size_t COLS = 7;
-	static constexpr size_t ROWS = COLS + 13 - 1;
 	static constexpr size_t DECK_IDX = 0;
 	static constexpr size_t FLIP_IDX = DECK_IDX + 1;
 	static constexpr size_t ACE_IDX = FLIP_IDX + 1;
 	static constexpr size_t BOARD_IDX = ACE_IDX + 4;
 	// Outside the bounds, the last real index is this -1
-	static constexpr size_t END_IDX = BOARD_IDX + ROWS * COLS;
+	static constexpr size_t END_IDX = BOARD_IDX + COLS;
 
-	std::array<std::array<Card, COLS>, ROWS> main_board{};
+	std::array<std::vector<Card>, COLS> main_board{};
 	std::array<std::vector<Card>, 4> aces = {std::vector<Card>{EMPTY_CARD}, {EMPTY_CARD}, {EMPTY_CARD}, {EMPTY_CARD}};
 	Deck draw_pile{};
 	std::vector<Card> flipped{};
@@ -195,10 +194,6 @@ struct Board {
 	Card index(size_t idx) const;
 	Card& index(size_t idx);
 
-	// God this is just begging to have actual testing
-	// Test all the internal sub-functions with toy setups
-	// Test a whole bunch of premade boards to ensure that the set of legal moves are correct
-	// I miss rust's testing suite
 	bool is_legal_move(size_t idx_a, size_t idx_b) const;
 
 	void perform_move(size_t idx_a, size_t idx_b);
@@ -206,27 +201,34 @@ struct Board {
 	double score() const;
 
 	friend std::ostream& operator<<(std::ostream& os, const Board& board) {
-		for (auto&& row : board.main_board) {
-			for (auto&& card : row) {
+		if (auto deck_top = board.draw_pile.view_top_card()) {
+			auto card = deck_top.value();
+			card.face_down = true;
+			os << card;
+		} else {
+			os << board.EMPTY_CARD;
+		}
+		os << "\n";
+
+		if (!board.flipped.empty()) {
+			auto card = board.flipped[board.flipped.size() - 1];
+			os << card;
+		} else {
+			os << board.EMPTY_CARD;
+		}
+		os << "\n";
+
+		for (auto&& card : board.aces) {
+			os << card.back() << "\n";
+		}
+
+		// Prints the board sideways but whatever
+		for (auto&& col : board.main_board) {
+			for (auto&& card : col) {
 				os << card << " ";
 			}
 
 			os << "\n";
-		}
-
-		for (auto&& card : board.aces) {
-			os << card.back() << " ";
-		}
-
-		if (!board.flipped.empty()) {
-			auto card = board.flipped[board.flipped.size() - 1];
-			os << card << " ";
-		}
-
-		if (auto deck_top = board.draw_pile.view_top_card()) {
-			auto card = deck_top.value();
-			card.face_down = true;
-			os << card << " ";
 		}
 
 		return os;

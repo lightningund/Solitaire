@@ -277,6 +277,7 @@ struct Robot {
 			auto dst_node = get_dst_node(dst);
 
 			// Only add it if there isn't already a link in the other direction
+			// TODO: This still has the possibility to create cycles that are more than 2 nodes long
 			if (
 				std::find_if(src_node.cons.begin(), src_node.cons.end(), [&](Connection& con) {
 					return con.backtarget == dst;
@@ -483,7 +484,7 @@ void run_robot(Robot& robot, Board& board, size_t num_turns, RNG& gen) {
 }
 
 void evolution() {
-	const size_t pop_size = 10000;
+	const size_t pop_size = 100000;
 	// How many times we duplicate the surviving members
 	// This dictates the survival percentage
 	// So 2 would be the top 50%, and 10 would be the top 10%
@@ -492,9 +493,9 @@ void evolution() {
 	const size_t num_saved = pop_size * cutoff;
 
 	// The number of different board deals we try on each robot each time
-	const size_t num_runs = 10;
+	const size_t num_runs = 50;
 
-	const size_t turns = 20;
+	const size_t turns = 10;
 	const size_t generations = 200;
 
 	std::random_device random_dev;
@@ -523,7 +524,9 @@ void evolution() {
 		// X Filter the best
 		// X Duplicate and mutate
 
-	for (int generation = 0; generation < generations; ++generation) {
+	// for (int generation = 0; generation < generations; ++generation) {
+	size_t generation = 0;
+	while (++generation) {
 		// TODO: Parallelize
 		for (size_t i = 0; i < pop_size; ++i) {
 			auto& robot = robots[i];

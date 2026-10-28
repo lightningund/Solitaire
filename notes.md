@@ -44,22 +44,35 @@
 		- Side effects:
 			- N/A
 
+- Column-based check plan:
+	- `src` on deck:
+		- Second idx doesn't matter
+		- Can only be 5) or 6)
+	- `dst` on board:
+		- Get the bottom card and store it
+			- Pretend empty is a rank above king or something?
+		- `src` on board:
+			- Search for a card in the stack that is one rank below and an opposite suit
+		- `src` on ace/flip pile:
+			- Check if the top card of the pile works on the bottom of the stack
+	- `dst` on ace:
+		- `src` on board/flip pile:
+			- Check if the top card of the pile works on the bottom of the stack
+
 - Check order plan:
 	- First click on deck:
 		- Second idx doesn't matter
 		- Can only be 5) or 6)
 	- Otherwise:
 		- Instant DQs:
-			- Moving card is empty
-			- Moving card is face down
+			- Moving column is empty
 			- Destination is deck
 			- Destination is flip pile
 		- If the destination is on the board:
-			- Instant DQs:
-				- Destination is not empty
-			- If moving card is a King:
+			- If destination column is empty:
 				- Instant DQs:
-					- Destination is not in the top row
+					- Moving column does not have a king
+				- return (king_idx, 0)
 			- Otherwise:
 				- Instant DQs:
 					- Destination is in the top row
