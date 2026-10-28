@@ -173,6 +173,17 @@ void robo_player(RNG& gen, Board& board) {
 	run_robot(robot, board, 100, gen);
 }
 
+// Assumes the robots list is already sorted
+template <typename RNG>
+void duplicate_best_bots(RNG& gen, std::vector<Robot>& robots, size_t duplicates, size_t saved) {
+	for (size_t i = 0; i < saved; ++i) {
+		for (size_t j = 0; j < duplicates; ++j) {
+			robots[i + j * duplicates] = robots[i];
+			robots[i + j * duplicates].mutate(gen);
+		}
+	}
+}
+
 void evolution() {
 	const size_t pop_size = 100;
 	// How many times we duplicate the surviving members
@@ -197,16 +208,6 @@ void evolution() {
 		robots.push_back(Robot(gen));
 		// robots.push_back(Robot{});
 	}
-
-	// Assumes the robots list is already sorted
-	auto duplicate_best = [&]() {
-		for (size_t i = 0; i < num_saved; ++i) {
-			for (size_t j = 0; j < duplicates; ++j) {
-				robots[i + j * duplicates] = robots[i];
-				robots[i + j * duplicates].mutate(gen);
-			}
-		}
-	};
 
 	// Loop for number of generations
 		// X Run each robot
@@ -243,7 +244,7 @@ void evolution() {
 			return a.score > b.score;
 		});
 
-		duplicate_best();
+		duplicate_best_bots(gen, robots, duplicates, num_saved);
 
 		std::cout << "Best robot of generation " << generation << ": ";
 		robots[0].serialize(std::cout);

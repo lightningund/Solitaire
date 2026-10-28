@@ -78,29 +78,14 @@ struct BoardChecker {
 	// Get the index of the nth ace
 	size_t get_ace_idx(size_t n) const { return board.ACE_IDX + n; }
 
-	// /// Properties of the card at an index
+	/// Properties of the card at an index
 	// Check if the card at an index is a king
 	bool is_king(Card card) const { return card.rank() == 12; }
 	// Check if the card at an index is an ace
 	bool is_ace(Card card) const { return card.rank() == 0; }
 
 	Card get_last_card(size_t idx) const {
-		if (is_board(idx)) {
-			const auto col = board.main_board[idx - board.BOARD_IDX];
-			return col.empty() ? board.EMPTY_CARD : col.back();
-		}
-
-		if (is_ace_slot(idx)) {
-			const auto col = board.aces[idx - board.ACE_IDX];
-			return col.empty() ? board.EMPTY_CARD : col.back();
-		}
-
-		if (is_flip_pile(idx)) {
-			const auto col = board.flipped;
-			return col.empty() ? board.EMPTY_CARD : col.back();
-		}
-
-		return board.EMPTY_CARD;
+		return board.column(idx).back();
 	}
 
 	CardPile get_board_column(size_t idx) const {
