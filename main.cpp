@@ -418,8 +418,7 @@ void console_player(Board& board) {
 
 template <typename RNG>
 void random_player(RNG& gen, Board& board) {
-	// Exclude the deck
-	std::uniform_int_distribution<> idx_distrib{1, Board::END_IDX - 1};
+	std::uniform_int_distribution<> idx_distrib{0, Board::END_IDX - 1};
 
 	for (int i = 0; i < 100; ++i) {
 		size_t tries = 0;
@@ -431,13 +430,7 @@ void random_player(RNG& gen, Board& board) {
 			++tries;
 
 			std::cout << tries << "\r";
-
-			// Failsafe for if we don't have any legal moves
-			if (tries > 5000) {
-				idx_a = Board::DECK_IDX;
-				break;
-			}
-		} while (!board.is_legal_move(idx_a, idx_b));
+		} while (!board.is_legal_move(idx_a, idx_b) && tries < 5000);
 
 		// If we tripped the failsafe but can't draw just give up
 		if (!board.is_legal_move(idx_a, idx_b)) {

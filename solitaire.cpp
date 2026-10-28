@@ -222,7 +222,10 @@ struct BoardChecker {
 			// If the king is already on the top, also illegal
 			// This prevents the AI from moving it back and forth forever
 
-		if (is_deck(src)) {
+		// ADDITIONAL STIPULATION:
+		// Both indices have to be the deck.
+		// This reduces the chance of accidentally clicking it
+		if (is_deck(src) && is_deck(dst)) {
 			// std::cout << "Clicked on deck\n";
 			return can_click_deck();
 		}
@@ -251,6 +254,9 @@ struct BoardChecker {
 
 		if (is_ace_slot(dst)) {
 			// std::cout << "Ace Target\n";
+			// ADDITIONAL STIPULATION:
+			// No moving aces between slots.
+			// This prevents the AI from getting in a loop
 			if (is_ace_slot(src)) return false;
 			// std::cout << "Non-Ace Source\n";
 
