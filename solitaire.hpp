@@ -26,17 +26,17 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& arr) {
 
 struct Board {
 	private:
-	Card get_board_card(size_t idx) const;
-	Card& get_board_card(size_t idx);
+	// Card get_board_card(size_t idx) const;
+	// Card& get_board_card(size_t idx);
 
-	Card get_ace_card(size_t idx) const;
-	Card& get_ace_card(size_t idx);
+	// Card get_ace_card(size_t idx) const;
+	// Card& get_ace_card(size_t idx);
 
-	Card get_deck_card() const;
-	Card& get_deck_card();
+	// Card get_deck_card() const;
+	// Card& get_deck_card();
 
-	Card get_flip_card() const;
-	Card& get_flip_card();
+	// Card get_flip_card() const;
+	// Card& get_flip_card();
 
 	void draw_from_deck();
 
@@ -66,9 +66,9 @@ struct Board {
 
 	void deal(Deck& deck);
 
-	Card cindex(size_t idx) const;
-	Card index(size_t idx) const;
-	Card& index(size_t idx);
+	// Card cindex(size_t idx) const;
+	// Card index(size_t idx) const;
+	// Card& index(size_t idx);
 
 	CardPile column(size_t idx) const;
 	CardPile& column(size_t idx);
