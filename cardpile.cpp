@@ -46,9 +46,14 @@ Card CardPile::pop() {
 	Card c = back();
 	cards.pop_back();
 	if (cards.empty()) {
-		cards.push_back(Card::EMPTY_CARD);
+		cards.push_back(EMPTY_CARD);
 	}
 	return c;
+}
+
+void CardPile::clear() {
+	cards.clear();
+	cards.push_back(EMPTY_CARD);
 }
 
 bool CardPile::empty() const {
@@ -57,6 +62,13 @@ bool CardPile::empty() const {
 }
 
 size_t CardPile::size() const { return cards.size(); }
+
+Card* CardPile::begin() { return cards.data(); }
+const Card* CardPile::begin() const { return cards.data(); }
+const Card* CardPile::cbegin() const { return cards.data(); }
+Card* CardPile::end() { return cards.data() + size(); }
+const Card* CardPile::end() const { return cards.data() + size(); }
+const Card* CardPile::cend() const { return cards.data() + size(); }
 
 Card CardPile::back() const { return cards.back(); }
 Card& CardPile::back() { return cards.back(); }

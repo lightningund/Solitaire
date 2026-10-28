@@ -42,7 +42,7 @@ Card& Board::get_flip_card() {
 
 void Board::draw_from_deck() {
 	if (auto card = draw_pile.take_top_card()) {
-		flipped.push_back(card.value());
+		flipped.push(card.value());
 	} else {
 		for (auto card : flipped) {
 			if (card.empty()) continue;
@@ -56,25 +56,9 @@ void Board::flip_card(size_t idx) {
 	index(idx).face_down = false;
 }
 
-void Board::pop_card(size_t idx) {
-	if (idx == FLIP_IDX) {
-		flipped.pop_back();
-		if (flipped.empty()) {
-			flipped.push_back(EMPTY_CARD);
-		}
-	} else {
-		idx -= ACE_IDX;
-		aces[idx].pop_back();
-		if (aces[idx].empty()) {
-			aces[idx].push_back(EMPTY_CARD);
-		}
-	}
-}
-
 void Board::move_card(size_t src, size_t dst) {
-	auto temp = column(src).back();
-	column(src).pop_back();
-	column(dst).push_back(temp);
+	auto temp = column(src).pop();
+	column(dst).push(temp);
 }
 
 void Board::deal(Deck& deck) {
@@ -82,7 +66,7 @@ void Board::deal(Deck& deck) {
 	for (size_t col = 0; col < COLS; ++col) {
 		for (size_t row = 0; row <= col; ++row) {
 			if (auto card = draw_pile.take_top_card()) {
-				main_board[col].push_back(card.value());
+				main_board[col].push(card.value());
 				main_board[col].back().face_down = (col != row);
 			}
 		}
@@ -119,7 +103,7 @@ Card& Board::index(size_t idx) {
 	return get_board_card(idx - BOARD_IDX);
 }
 
-std::vector<Card> Board::column(size_t idx) const {
+CardPile Board::column(size_t idx) const {
 	if (idx >= BOARD_IDX) { return main_board[idx - BOARD_IDX]; }
 	if (idx >= ACE_IDX && idx < BOARD_IDX) { return aces[idx - ACE_IDX]; }
 	if (idx == FLIP_IDX) { return flipped; }
@@ -127,7 +111,7 @@ std::vector<Card> Board::column(size_t idx) const {
 	return {};
 }
 
-std::vector<Card>& Board::column(size_t idx) {
+CardPile& Board::column(size_t idx) {
 	if (idx >= BOARD_IDX) { return main_board[idx - BOARD_IDX]; }
 	if (idx >= ACE_IDX && idx < BOARD_IDX) { return aces[idx - ACE_IDX]; }
 	if (idx == FLIP_IDX) { return flipped; }
@@ -194,7 +178,7 @@ struct BoardChecker {
 		return board.EMPTY_CARD;
 	}
 
-	std::vector<Card> get_board_column(size_t idx) const {
+	CardPile get_board_column(size_t idx) const {
 		return board.main_board[idx - board.BOARD_IDX];
 	}
 
@@ -328,7 +312,6 @@ void Board::perform_move(size_t src, size_t dst) {
 		}
 	} else {
 		move_card(src, dst);
-		pop_card(src);
 	}
 }
 

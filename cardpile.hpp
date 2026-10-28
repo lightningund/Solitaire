@@ -34,8 +34,6 @@ struct Card {
 	std::string get_print() const;
 
 	public:
-	static Card EMPTY_CARD;
-
 	CardRep num{EMPTY_REP};
 	bool face_down{false};
 
@@ -63,15 +61,25 @@ struct Card {
 // If you add a card on top of the empty card, it will be replaced
 struct CardPile {
 	private:
-	std::vector<Card> cards{Card::EMPTY_CARD};
+	inline static const Card EMPTY_CARD{};
+	std::vector<Card> cards{EMPTY_CARD};
 
 	public:
 	void push(Card c);
 	Card pop();
 
+	void clear();
+
 	bool empty() const;
 
 	size_t size() const;
+
+	Card* begin();
+	const Card* begin() const;
+	const Card* cbegin() const;
+	Card* end();
+	const Card* end() const;
+	const Card* cend() const;
 
 	[[nodiscard]] Card back() const;
 	[[nodiscard]] Card& back();
@@ -89,8 +97,16 @@ struct CardPile {
 
 		// Make sure to maintain the invariant
 		if (src.cards.empty()) {
-			src.cards.push_back(Card::EMPTY_CARD);
+			src.cards.push_back(EMPTY_CARD);
 		}
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const CardPile& pile) {
+		for (auto&& elem : pile.cards) {
+			os << elem << ", ";
+		}
+
+		return os;
 	}
 };
 

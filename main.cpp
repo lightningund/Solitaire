@@ -593,9 +593,9 @@ int main() {
 	Board board{};
 	board.deal(deck);
 
-	// console_player(board);
+	console_player(board);
 
-	random_player(g, board);
+	// random_player(g, board);
 
 	// Robot robot{g};
 	// for (int i = 0; i < 100; ++i) {

@@ -42,8 +42,6 @@ struct Board {
 
 	void flip_card(size_t idx);
 
-	void pop_card(size_t idx);
-
 	void move_card(size_t src, size_t dst);
 
 	bool has_won() const;
@@ -61,10 +59,10 @@ struct Board {
 	// Outside the bounds, the last real index is this -1
 	static constexpr size_t END_IDX = BOARD_IDX + COLS;
 
-	std::array<std::vector<Card>, COLS> main_board{};
-	std::array<std::vector<Card>, 4> aces = {std::vector<Card>{EMPTY_CARD}, {EMPTY_CARD}, {EMPTY_CARD}, {EMPTY_CARD}};
+	std::array<CardPile, COLS> main_board{};
+	std::array<CardPile, 4> aces{};
 	Deck draw_pile{};
-	std::vector<Card> flipped{};
+	CardPile flipped{};
 
 	void deal(Deck& deck);
 
@@ -72,8 +70,8 @@ struct Board {
 	Card index(size_t idx) const;
 	Card& index(size_t idx);
 
-	std::vector<Card> column(size_t idx) const;
-	std::vector<Card>& column(size_t idx);
+	CardPile column(size_t idx) const;
+	CardPile& column(size_t idx);
 
 	bool is_legal_move(size_t idx_a, size_t idx_b) const;
 
@@ -99,13 +97,7 @@ struct Board {
 		os << "\n";
 
 		print();
-		if (!board.flipped.empty()) {
-			auto card = board.flipped[board.flipped.size() - 1];
-			os << card;
-		} else {
-			os << board.EMPTY_CARD;
-		}
-		os << "\n";
+		os << board.flipped << "\n";
 
 		for (auto&& card : board.aces) {
 			print();
@@ -115,10 +107,7 @@ struct Board {
 		// Prints the board sideways but whatever
 		for (auto&& column : board.main_board) {
 			print();
-			for (auto&& card : column) {
-				os << card << " ";
-			}
-			os << "\n";
+			os << column << "\n";
 		}
 
 		return os;
