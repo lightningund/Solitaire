@@ -396,6 +396,22 @@ void test_robot_serial() {
 	std::cout << "\n";
 }
 
+void console_player(Board& board) {
+	std::cout << board << "\n";
+
+	size_t idx_a;
+	std::cin >> idx_a;
+
+	std::cout << idx_a << ": " << board.column(idx_a) << "\n";
+
+	size_t idx_b;
+	std::cin >> idx_b;
+
+	std::cout << idx_b << ": " << board.column(idx_b) << "\n";
+
+	std::cout << board.is_legal_move(idx_a, idx_b) << "\n";
+}
+
 template <typename RNG>
 void random_player(RNG& gen, Board& board) {
 	// Exclude the deck
@@ -564,16 +580,16 @@ int main() {
 	// test_node_serial();
 	// test_robot_serial();
 
-	// std::random_device rd;
-	// std::mt19937 g(rd());
+	std::random_device rd;
+	std::mt19937 g(rd());
 
-	// Deck deck{};
-	// deck.shuffle(g);
+	Deck deck{};
+	deck.shuffle(g);
 
-	// Board board{};
-	// board.deal(deck);
+	Board board{};
+	board.deal(deck);
 
-	// std::cout << board << "\n";
+	console_player(board);
 
 	// random_player(g, board);
 
@@ -586,7 +602,7 @@ int main() {
 	// std::cout << robot << "\n";
 	// std::cout << board.draw_pile.cards << "\n";
 
-	evolution();
+	// evolution();
 
 	return 0;
 }

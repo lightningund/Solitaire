@@ -143,7 +143,7 @@ void Board::move_card(size_t src, size_t dst) {
 void Board::deal(Deck& deck) {
 	draw_pile = deck.clone();
 	for (size_t col = 0; col < COLS; ++col) {
-		for (size_t row = col; row < COLS; ++row) {
+		for (size_t row = 0; row <= col; ++row) {
 			if (auto card = draw_pile.take_top_card()) {
 				main_board[col].push_back(card.value());
 				main_board[col].back().face_down = (col != row);
@@ -180,6 +180,14 @@ Card& Board::index(size_t idx) {
 	}
 
 	return get_board_card(idx - BOARD_IDX);
+}
+
+std::vector<Card> Board::column(size_t idx) const {
+	if (idx >= BOARD_IDX) { return main_board[idx - BOARD_IDX]; }
+	if (idx >= ACE_IDX && idx < BOARD_IDX) { return aces[idx - ACE_IDX]; }
+	if (idx == FLIP_IDX) { return flipped; }
+
+	return {};
 }
 
 // A whole bunch of functions designed to be used when checking for move legality
@@ -223,7 +231,7 @@ struct BoardChecker {
 
 	Card get_last_card(size_t idx) const {
 		if (is_board(idx)) {
-			const auto col = board.main_board[idx - board.DECK_IDX];
+			const auto col = board.main_board[idx - board.BOARD_IDX];
 			return col.empty() ? board.EMPTY_CARD : col.back();
 		}
 
@@ -241,7 +249,7 @@ struct BoardChecker {
 	}
 
 	std::vector<Card> get_board_column(size_t idx) const {
-		return board.main_board[idx - board.DECK_IDX];
+		return board.main_board[idx - board.BOARD_IDX];
 	}
 
 	// Check if two cards are suits of the same color
@@ -275,11 +283,14 @@ struct BoardChecker {
 	/// Takes the two columns as parameters
 	bool is_legal_move(size_t src, size_t dst) const {
 		if (is_deck(src)) {
+			std::cout << "Clicked on deck\n";
 			return can_click_deck();
 		}
 
 		if (is_board(dst)) {
+			std::cout << "Board Target\n";
 			if (is_board(src)) {
+				std::cout << "Board Source\n";
 				const auto target = get_last_card(dst);
 				for (auto c : get_board_column(src)) {
 					if (c.empty() || c.face_down) continue;
@@ -291,15 +302,20 @@ struct BoardChecker {
 				return false;
 			}
 
+			std::cout << "Trying to move " << get_last_card(src) << " onto " << get_last_card(dst) << "\n";
 			return can_go_under(get_last_card(src), get_last_card(dst));
 		}
 
 		if (is_ace_slot(dst)) {
+			std::cout << "Ace Target\n";
 			if (is_ace_slot(src)) return false;
+			std::cout << "Non-Ace Source\n";
 
+			std::cout << "Trying to move " << get_last_card(src) << " onto " << get_last_card(dst) << "\n";
 			return can_go_on_ace(get_last_card(src), get_last_card(dst));
 		}
 
+		std::cout << "Illegal Destination\n";
 		return false;
 	}
 };

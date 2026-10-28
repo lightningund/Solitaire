@@ -147,6 +147,8 @@ struct Board {
 	Card index(size_t idx) const;
 	Card& index(size_t idx);
 
+	std::vector<Card> column(size_t idx) const;
+
 	bool is_legal_move(size_t idx_a, size_t idx_b) const;
 
 	void perform_move(size_t idx_a, size_t idx_b);
@@ -154,6 +156,13 @@ struct Board {
 	double score() const;
 
 	friend std::ostream& operator<<(std::ostream& os, const Board& board) {
+		size_t col = 0;
+
+		const auto print = [&]() {
+			os << col++ << ": ";
+		};
+
+		print();
 		if (auto deck_top = board.draw_pile.view_top_card()) {
 			auto card = deck_top.value();
 			card.face_down = true;
@@ -163,6 +172,7 @@ struct Board {
 		}
 		os << "\n";
 
+		print();
 		if (!board.flipped.empty()) {
 			auto card = board.flipped[board.flipped.size() - 1];
 			os << card;
@@ -172,15 +182,16 @@ struct Board {
 		os << "\n";
 
 		for (auto&& card : board.aces) {
+			print();
 			os << card.back() << "\n";
 		}
 
 		// Prints the board sideways but whatever
-		for (auto&& col : board.main_board) {
-			for (auto&& card : col) {
+		for (auto&& column : board.main_board) {
+			print();
+			for (auto&& card : column) {
 				os << card << " ";
 			}
-
 			os << "\n";
 		}
 
