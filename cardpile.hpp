@@ -34,6 +34,8 @@ struct Card {
 	std::string get_print() const;
 
 	public:
+	static Card EMPTY_CARD;
+
 	CardRep num{EMPTY_REP};
 	bool face_down{false};
 
@@ -61,21 +63,35 @@ struct Card {
 // If you add a card on top of the empty card, it will be replaced
 struct CardPile {
 	private:
-	std::vector<Card> cards{};
+	std::vector<Card> cards{Card::EMPTY_CARD};
 
 	public:
-	void push();
-	void pop();
+	void push(Card c);
+	Card pop();
 
-	void empty();
+	bool empty() const;
 
-	void back() const;
-	void back();
+	size_t size() const;
 
-	void operator[]() const;
-	void operator[]();
+	[[nodiscard]] Card back() const;
+	[[nodiscard]] Card& back();
 
-	friend void move_tail(CardPile& src, CardPile& dst, size_t cutoff);
+	[[nodiscard]] Card operator[](size_t idx) const;
+	[[nodiscard]] Card& operator[](size_t idx);
+
+	friend void move_tail(CardPile& src, CardPile& dst, size_t cutoff) {
+		dst.cards.insert(
+			dst.cards.end(),
+			std::make_move_iterator(src.cards.begin() + cutoff),
+			std::make_move_iterator(src.cards.end())
+		);
+		src.cards.erase(src.cards.begin() + cutoff, src.cards.end());
+
+		// Make sure to maintain the invariant
+		if (src.cards.empty()) {
+			src.cards.push_back(Card::EMPTY_CARD);
+		}
+	}
 };
 
 struct Deck {

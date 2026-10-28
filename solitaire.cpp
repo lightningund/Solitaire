@@ -287,16 +287,6 @@ bool Board::is_legal_move(size_t src, size_t dst) const {
 	return bc.is_legal_move(src, dst);
 }
 
-template <typename T>
-void move_tail(std::vector<T>& src, std::vector<T>& dst, size_t cutoff) {
-	dst.insert(
-		dst.end(),
-		std::make_move_iterator(src.begin() + cutoff),
-		std::make_move_iterator(src.end())
-	);
-	src.erase(src.begin() + cutoff, src.end());
-}
-
 void Board::perform_move(size_t src, size_t dst) {
 	if (!is_legal_move(src, dst)) return;
 

@@ -33,6 +33,37 @@ Card Card::operator=(const Card& src) {
 	return *this;
 }
 
+void CardPile::push(Card c) {
+	if (back().empty()) {
+		// If the current last card is empty, replace it with the new one
+		back() = c;
+	} else {
+		cards.push_back(c);
+	}
+}
+
+Card CardPile::pop() {
+	Card c = back();
+	cards.pop_back();
+	if (cards.empty()) {
+		cards.push_back(Card::EMPTY_CARD);
+	}
+	return c;
+}
+
+bool CardPile::empty() const {
+	// If the back card is empty, it must mean we have no real cards
+	return size() == 1 && back().empty();
+}
+
+size_t CardPile::size() const { return cards.size(); }
+
+Card CardPile::back() const { return cards.back(); }
+Card& CardPile::back() { return cards.back(); }
+
+Card CardPile::operator[](size_t idx) const { return cards[idx]; }
+Card& CardPile::operator[](size_t idx) { return cards[idx]; }
+
 Deck::Deck() {
 	cards.resize(52);
 	std::iota(cards.begin(), cards.end(), 0);
