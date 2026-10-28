@@ -484,7 +484,7 @@ void run_robot(Robot& robot, Board& board, size_t num_turns, RNG& gen) {
 }
 
 void evolution() {
-	const size_t pop_size = 100000;
+	const size_t pop_size = 1000;
 	// How many times we duplicate the surviving members
 	// This dictates the survival percentage
 	// So 2 would be the top 50%, and 10 would be the top 10%
@@ -493,7 +493,7 @@ void evolution() {
 	const size_t num_saved = pop_size * cutoff;
 
 	// The number of different board deals we try on each robot each time
-	const size_t num_runs = 50;
+	const size_t num_runs = 10;
 
 	const size_t turns = 10;
 	const size_t generations = 200;

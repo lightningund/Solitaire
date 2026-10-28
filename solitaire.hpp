@@ -101,8 +101,6 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& arr) {
 
 struct Board {
 	private:
-	const Card EMPTY_CARD{};
-
 	Card get_board_card(size_t idx) const;
 	Card& get_board_card(size_t idx);
 
@@ -127,54 +125,9 @@ struct Board {
 	size_t num_ace_cards() const;
 	size_t num_face_up() const;
 
-	// Check if the deck can be used, either drawing or reshuffling
-	bool can_click_deck() const;
-
-	/// Properties of an index itself
-	// Checks if the index is the draw pile
-	bool is_deck(size_t idx) const;
-	// Checks if the index is the flip pile
-	bool is_flip_pile(size_t idx) const;
-	// Checks if the index is one of the four ace slots
-	bool is_ace_slot(size_t idx) const;
-	// Checks if the index is in the main board of cards
-	bool is_board(size_t idx) const;
-	// Checks if the index is in the top row of the board
-	// Meaningless if idx is not on the board
-	bool is_top_row(size_t idx) const;
-	// Checks if the index is in the bottom row of the board
-	bool is_bottom_row(size_t idx) const;
-
-	/// Index modifying functions
-	// Get the index of the card one above this one
-	// Returns the same index if it's in the top row
-	// UB if you call it with an index outside of the board
-	size_t one_above(size_t idx) const;
-	// Get the index of the card one below this one
-	// Returns the same index if it's in the bottom row
-	// UB if you call it with an index outside of the board
-	size_t one_below(size_t idx) const;
-	// Get the index of the nth ace
-	size_t get_ace(size_t n) const;
-
-	/// Properties of the card at an index
-	// Check if the card at an index is empty
-	bool is_empty(size_t idx) const;
-	// Check if the card at an index is face down
-	bool is_face_down(size_t idx) const;
-	// Check if the card at an index is a king
-	bool is_king(size_t idx) const;
-	// Check if the card at an index is an ace
-	bool is_ace(size_t idx) const;
-	// Get the rank of a card at an index
-	size_t get_rank(size_t idx) const;
-	// Get the suit of a card at an index
-	size_t get_suit(size_t idx) const;
-
-	// Check if two cards are suits of the same color
-	bool is_same_color(size_t idx_a, size_t idx_b) const;
-
 	public:
+	const Card EMPTY_CARD{};
+
 	static constexpr size_t COLS = 7;
 	static constexpr size_t DECK_IDX = 0;
 	static constexpr size_t FLIP_IDX = DECK_IDX + 1;

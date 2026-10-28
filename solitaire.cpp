@@ -142,11 +142,11 @@ void Board::move_card(size_t src, size_t dst) {
 
 void Board::deal(Deck& deck) {
 	draw_pile = deck.clone();
-	for (size_t row = 0; row < COLS; ++row) {
-		for (size_t col = row; col < COLS; ++col) {
+	for (size_t col = 0; col < COLS; ++col) {
+		for (size_t row = col; row < COLS; ++row) {
 			if (auto card = draw_pile.take_top_card()) {
-				main_board[row][col] = card.value();
-				main_board[row][col].face_down = (row != col);
+				main_board[col].push_back(card.value());
+				main_board[col].back().face_down = (col != row);
 			}
 		}
 	}
@@ -182,61 +182,126 @@ Card& Board::index(size_t idx) {
 	return get_board_card(idx - BOARD_IDX);
 }
 
-// Check if the deck can be used, either drawing or reshuffling
-bool Board::can_click_deck() const { return !(draw_pile.cards.empty() && flipped.empty()); };
+// A whole bunch of functions designed to be used when checking for move legality
+struct BoardChecker {
+	const Board& board;
 
-/// Properties of an index itself
-// Checks if the index is the draw pile
-bool Board::is_deck(size_t idx) const { return idx == DECK_IDX; };
-// Checks if the index is the flip pile
-bool Board::is_flip_pile(size_t idx) const { return idx == FLIP_IDX; };
-// Checks if the index is one of the four ace slots
-bool Board::is_ace_slot(size_t idx) const { return idx >= ACE_IDX && idx < BOARD_IDX; };
-// Checks if the index is in the main board of cards
-bool Board::is_board(size_t idx) const { return idx >= BOARD_IDX; };
-// Checks if the index is in the top row of the board
-// Meaningless if idx is not on the board
-bool Board::is_top_row(size_t idx) const { return idx < COLS + BOARD_IDX; };
-// Checks if the index is in the bottom row of the board
-bool Board::is_bottom_row(size_t idx) const { return idx > (COLS * (ROWS - 1) + BOARD_IDX); };
+	// Check if the deck can be used, either drawing or reshuffling
+	bool can_click_deck() const { return !(board.draw_pile.cards.empty() && board.flipped.empty()); }
 
-/// Index modifying functions
-// Get the index of the card one above this one
-// Returns the same index if it's in the top row
-// UB if you call it with an index outside of the board
-size_t Board::one_above(size_t idx) const {
-	if (is_top_row(idx)) return idx;
-	return idx - COLS;
-};
-// Get the index of the card one below this one
-// Returns the same index if it's in the bottom row
-// UB if you call it with an index outside of the board
-size_t Board::one_below(size_t idx) const {
-	if (is_bottom_row(idx)) return idx;
-	return idx + COLS;
-};
-// Get the index of the nth ace
-size_t Board::get_ace(size_t n) const { return ACE_IDX + n; };
+	/// Properties of an index itself
+	// Checks if the index is the draw pile
+	bool is_deck(size_t idx) const { return idx == board.DECK_IDX; }
+	// Checks if the index is the flip pile
+	bool is_flip_pile(size_t idx) const { return idx == board.FLIP_IDX; }
+	// Checks if the index is one of the four ace slots
+	bool is_ace_slot(size_t idx) const { return idx >= board.ACE_IDX && idx < board.BOARD_IDX; }
+	// Checks if the index is in the main board of cards
+	bool is_board(size_t idx) const { return idx >= board.BOARD_IDX; }
 
-/// Properties of the card at an index
-// Check if the card at an index is empty
-bool Board::is_empty(size_t idx) const { return index(idx).empty(); };
-// Check if the card at an index is face down
-bool Board::is_face_down(size_t idx) const { return index(idx).face_down; };
-// Check if the card at an index is a king
-bool Board::is_king(size_t idx) const { return index(idx).rank() == 12; };
-// Check if the card at an index is an ace
-bool Board::is_ace(size_t idx) const { return index(idx).rank() == 0; };
-// Get the rank of a card at an index
-size_t Board::get_rank(size_t idx) const { return index(idx).rank(); };
-// Get the suit of a card at an index
-size_t Board::get_suit(size_t idx) const { return index(idx).suit(); };
+	/// Index modifying functions
+	// Get the index of the nth ace
+	size_t get_ace_idx(size_t n) const { return board.ACE_IDX + n; }
 
-// Check if two cards are suits of the same color
-bool Board::is_same_color(size_t idx_a, size_t idx_b) const {
-	// We divide by two since the suits are laid out like Heart Diamond Club Spade
-	// So the two pairs are next to each other and we can just divide and see if they are in the same "group"
-	return (index(idx_a).suit() / 2) == (index(idx_b).suit() / 2);
+	/// Properties of the card at an index
+	// Check if the card at an index is empty
+	bool is_empty(size_t idx) const { return board.index(idx).empty(); }
+	// Check if the card at an index is face down
+	bool is_face_down(size_t idx) const { return board.index(idx).face_down; }
+	// Check if the card at an index is a king
+	bool is_king(size_t idx) const { return board.index(idx).rank() == 12; }
+	// Check if the card at an index is a king
+	bool is_king(Card card) const { return card.rank() == 12; }
+	// Check if the card at an index is an ace
+	bool is_ace(size_t idx) const { return board.index(idx).rank() == 0; }
+	// Check if the card at an index is an ace
+	bool is_ace(Card card) const { return card.rank() == 0; }
+	// Get the rank of a card at an index
+	size_t get_rank(size_t idx) const { return board.index(idx).rank(); }
+	// Get the suit of a card at an index
+	size_t get_suit(size_t idx) const { return board.index(idx).suit(); }
+
+	Card get_last_card(size_t idx) const {
+		if (is_board(idx)) {
+			const auto col = board.main_board[idx - board.DECK_IDX];
+			return col.empty() ? board.EMPTY_CARD : col.back();
+		}
+
+		if (is_ace_slot(idx)) {
+			const auto col = board.aces[idx - board.ACE_IDX];
+			return col.empty() ? board.EMPTY_CARD : col.back();
+		}
+
+		if (is_flip_pile(idx)) {
+			const auto col = board.flipped;
+			return col.empty() ? board.EMPTY_CARD : col.back();
+		}
+
+		return board.EMPTY_CARD;
+	}
+
+	std::vector<Card> get_board_column(size_t idx) const {
+		return board.main_board[idx - board.DECK_IDX];
+	}
+
+	// Check if two cards are suits of the same color
+	bool is_same_color(size_t idx_a, size_t idx_b) const {
+		// We divide by two since the suits are laid out like Heart Diamond Club Spade
+		// So the two pairs are next to each other and we can just divide and see if they are in the same "group"
+		return (board.index(idx_a).suit() / 2) == (board.index(idx_b).suit() / 2);
+	}
+
+	// Check if two cards are suits of the same color
+	bool is_same_color(Card card_a, Card card_b) const {
+		// We divide by two since the suits are laid out like Heart Diamond Club Spade
+		// So the two pairs are next to each other and we can just divide and see if they are in the same "group"
+		return (card_a.suit() / 2) == (card_b.suit() / 2);
+	}
+
+	// Check if a card can be placed underneath another one on the board
+	bool can_go_under(Card moving, Card dst) const {
+		if (dst.empty()) return is_king(moving);
+
+		return !is_same_color(moving, dst) && moving.rank() + 1 == dst.rank();
+	}
+
+	// Check if a card can be placed on top of another one on an ace pile
+	bool can_go_on_ace(Card moving, Card dst) const {
+		if (dst.empty()) return is_ace(moving);
+
+		return moving.suit() == dst.suit() && moving.rank() - 1 == dst.rank();
+	}
+
+	/// Takes the two columns as parameters
+	bool is_legal_move(size_t src, size_t dst) const {
+		if (is_deck(src)) {
+			return can_click_deck();
+		}
+
+		if (is_board(dst)) {
+			if (is_board(src)) {
+				const auto target = get_last_card(dst);
+				for (auto c : get_board_column(src)) {
+					if (c.empty() || c.face_down) continue;
+					if (can_go_under(c, target)) {
+						return true;
+					}
+				}
+
+				return false;
+			}
+
+			return can_go_under(get_last_card(src), get_last_card(dst));
+		}
+
+		if (is_ace_slot(dst)) {
+			if (is_ace_slot(src)) return false;
+
+			return can_go_on_ace(get_last_card(src), get_last_card(dst));
+		}
+
+		return false;
+	}
 };
 
 // God this is just begging to have actual testing
@@ -246,17 +311,8 @@ bool Board::is_same_color(size_t idx_a, size_t idx_b) const {
 
 /// Takes the two columns as parameters
 bool Board::is_legal_move(size_t src, size_t dst) const {
-	if (is_deck(src)) {
-		return can_click_deck();
-	}
-
-	if (is_board(dst)) {
-		const auto target = get_bottom_column_card(dst);
-
-		if (is_board(src)) {
-			// TODO
-		}
-	}
+	BoardChecker bc{*this};
+	return bc.is_legal_move(src, dst);
 
 	// if (is_deck(src)) {
 	// 	return can_click_deck();
@@ -327,32 +383,35 @@ bool Board::is_legal_move(size_t src, size_t dst) const {
 void Board::perform_move(size_t src, size_t dst) {
 	if (!is_legal_move(src, dst)) return;
 
-	if (is_deck(src)) {
-		draw_from_deck();
-	} else {
-		move_card(src, dst);
+	BoardChecker bc{*this};
 
-		if (is_ace_slot(src) || is_flip_pile(src)) {
-			pop_card(src);
-		} else if (is_board(src)) {
-			if (!is_top_row(src) && is_face_down(one_above(src))) {
-				flip_card(one_above(src));
-			}
+	// TODO
+	// if (bc.is_deck(src)) {
+	// 	draw_from_deck();
+	// } else {
+	// 	move_card(src, dst);
 
-			if (is_board(dst)) {
-				auto temp_a = src;
-				auto temp_b = dst;
-				while (!is_bottom_row(temp_a)) {
-					temp_a = one_below(temp_a);
-					temp_b = one_below(temp_b);
+	// 	if (bc.is_ace_slot(src) || bc.is_flip_pile(src)) {
+	// 		pop_card(src);
+	// 	} else if (is_board(src)) {
+	// 		if (!is_top_row(src) && is_face_down(one_above(src))) {
+	// 			flip_card(one_above(src));
+	// 		}
 
-					if (is_empty(temp_a)) break;
+	// 		if (is_board(dst)) {
+	// 			auto temp_a = src;
+	// 			auto temp_b = dst;
+	// 			while (!is_bottom_row(temp_a)) {
+	// 				temp_a = one_below(temp_a);
+	// 				temp_b = one_below(temp_b);
 
-					move_card(temp_a, temp_b);
-				}
-			}
-		}
-	}
+	// 				if (is_empty(temp_a)) break;
+
+	// 				move_card(temp_a, temp_b);
+	// 			}
+	// 		}
+	// 	}
+	// }
 }
 
 bool Board::has_won() const {
