@@ -60,7 +60,7 @@ struct Card {
 // If you remove the last real card, a new empty card will be generated
 // If you add a card on top of the empty card, it will be replaced
 struct CardPile {
-	private:
+	protected:
 	inline static const Card EMPTY_CARD{};
 	std::vector<Card> cards{EMPTY_CARD};
 
@@ -120,11 +120,11 @@ struct CardPile {
 	}
 };
 
-struct Deck {
-	std::vector<Card> cards{};
+struct Deck : public CardPile {
+	// std::vector<Card> cards{};
 
-	Deck();
-	Deck(std::vector<Card> src) : cards{src} {}
+	// Deck();
+	// Deck(std::vector<Card> src) : cards{src} {}
 
 	template <typename RandomGen>
 	void shuffle(RandomGen& gen) {
@@ -137,11 +137,11 @@ struct Deck {
 
 	Deck clone() const;
 
-	friend std::ostream& operator<<(std::ostream& os, const Deck& deck) {
-		for (auto&& elem : deck.cards) {
-			os << elem << ", ";
-		}
+	// friend std::ostream& operator<<(std::ostream& os, const Deck& deck) {
+	// 	for (auto&& elem : deck.cards) {
+	// 		os << elem << ", ";
+	// 	}
 
-		return os;
-	}
+	// 	return os;
+	// }
 };

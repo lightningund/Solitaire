@@ -76,10 +76,10 @@ Card& CardPile::back() { return cards.back(); }
 Card CardPile::operator[](size_t idx) const { return cards[idx]; }
 Card& CardPile::operator[](size_t idx) { return cards[idx]; }
 
-Deck::Deck() {
-	cards.resize(52);
-	std::iota(cards.begin(), cards.end(), 0);
-}
+// Deck::Deck() {
+// 	cards.resize(52);
+// 	std::iota(cards.begin(), cards.end(), 0);
+// }
 
 std::optional<Card> Deck::take_top_card() {
 	std::optional<Card> top_card{};
@@ -101,8 +101,8 @@ std::optional<Card> Deck::view_top_card() const {
 }
 
 Deck Deck::clone() const {
-	std::vector<Card> dest{};
-	dest.resize(cards.size());
-	std::copy(cards.begin(), cards.end(), dest.begin());
+	Deck dest{};
+	dest.cards.resize(cards.size());
+	std::copy(cards.begin(), cards.end(), dest.cards.begin());
 	return dest;
 }

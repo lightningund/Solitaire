@@ -45,8 +45,7 @@ void Board::draw_from_deck() {
 		flipped.push(card.value());
 	} else {
 		for (auto card : flipped) {
-			if (card.empty()) continue;
-			draw_pile.cards.push_back(card);
+			draw_pile.push(card);
 		}
 		flipped.clear();
 	}
@@ -104,20 +103,22 @@ void Board::deal(Deck& deck) {
 // }
 
 CardPile Board::column(size_t idx) const {
-	if (idx >= BOARD_IDX) { return main_board[idx - BOARD_IDX]; }
-	if (idx >= ACE_IDX && idx < BOARD_IDX) { return aces[idx - ACE_IDX]; }
-	if (idx == FLIP_IDX) { return flipped; }
+	if (idx == DECK_IDX) return draw_pile;
+	if (idx == FLIP_IDX) return flipped;
+	if (idx >= ACE_IDX && idx < BOARD_IDX) return aces[idx - ACE_IDX];
+	if (idx >= BOARD_IDX) return main_board[idx - BOARD_IDX];
 
-	return {};
+	throw "Index out of bounds";
 }
 
 CardPile& Board::column(size_t idx) {
-	if (idx >= BOARD_IDX) { return main_board[idx - BOARD_IDX]; }
-	if (idx >= ACE_IDX && idx < BOARD_IDX) { return aces[idx - ACE_IDX]; }
-	if (idx == FLIP_IDX) { return flipped; }
+	if (idx == DECK_IDX) return draw_pile;
+	if (idx == FLIP_IDX) return flipped;
+	if (idx >= ACE_IDX && idx < BOARD_IDX) return aces[idx - ACE_IDX];
+	if (idx >= BOARD_IDX) return main_board[idx - BOARD_IDX];
 
 	// Throw an error if it's not one of the main ones
-	return main_board[idx + 100];
+	throw "Index out of bounds";
 }
 
 // A whole bunch of functions designed to be used when checking for move legality
@@ -125,7 +126,7 @@ struct BoardChecker {
 	const Board& board;
 
 	// Check if the deck can be used, either drawing or reshuffling
-	bool can_click_deck() const { return !(board.draw_pile.cards.empty() && board.flipped.empty()); }
+	bool can_click_deck() const { return !(board.draw_pile.empty() && board.flipped.empty()); }
 
 	/// Properties of an index itself
 	// Checks if the index is the draw pile

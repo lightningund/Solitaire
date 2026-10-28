@@ -491,7 +491,7 @@ void run_robot(Robot& robot, Board& board, size_t num_turns, RNG& gen) {
 			}
 		}
 
-		std::cout << board_arr << "\n";
+		// std::cout << board_arr << "\n";
 
 		robot.set_inputs(board_arr);
 
