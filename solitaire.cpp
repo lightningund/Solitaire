@@ -1,44 +1,7 @@
 #include <array>
-#include <vector>
 #include <optional>
 
 #include "solitaire.hpp"
-
-// Card Board::get_board_card(size_t idx) const {
-// 	return main_board[idx / COLS][idx % COLS];
-// }
-// Card& Board::get_board_card(size_t idx) {
-// 	return main_board[idx / COLS][idx % COLS];
-// }
-
-// Card Board::get_ace_card(size_t idx) const {
-// 	return aces[idx].back();
-// }
-// Card& Board::get_ace_card(size_t idx) {
-// 	return aces[idx].back();
-// }
-
-// Card Board::get_deck_card() const {
-// 	if (auto card = draw_pile.view_top_card()) {
-// 		return card.value();
-// 	}
-
-// 	return EMPTY_CARD;
-// }
-// Card& Board::get_deck_card() {
-// 	return draw_pile.cards.back();
-// }
-
-// Card Board::get_flip_card() const {
-// 	if (!flipped.empty()) {
-// 		return flipped.back();
-// 	}
-
-// 	return EMPTY_CARD;
-// }
-// Card& Board::get_flip_card() {
-// 	return flipped.back();
-// }
 
 void Board::draw_from_deck() {
 	if (auto card = draw_pile.take_top_card()) {
@@ -50,10 +13,6 @@ void Board::draw_from_deck() {
 		flipped.clear();
 	}
 }
-
-// void Board::flip_card(size_t idx) {
-// 	index(idx).face_down = false;
-// }
 
 void Board::move_card(size_t src, size_t dst) {
 	auto temp = column(src).pop();
@@ -71,36 +30,6 @@ void Board::deal(Deck& deck) {
 		}
 	}
 }
-
-// Card Board::index(size_t idx) const {
-// 	if (idx == DECK_IDX) {
-// 		return get_deck_card();
-// 	}
-// 	if (idx == FLIP_IDX) {
-// 		return get_flip_card();
-// 	}
-// 	if (idx < BOARD_IDX) {
-// 		return get_ace_card(idx - ACE_IDX);
-// 	}
-
-// 	return get_board_card(idx - BOARD_IDX);
-// }
-// Card Board::cindex(size_t idx) const {
-// 	return index(idx);
-// }
-// Card& Board::index(size_t idx) {
-// 	if (idx == DECK_IDX) {
-// 		return get_deck_card();
-// 	}
-// 	if (idx == FLIP_IDX) {
-// 		return get_flip_card();
-// 	}
-// 	if (idx < BOARD_IDX) {
-// 		return get_ace_card(idx - ACE_IDX);
-// 	}
-
-// 	return get_board_card(idx - BOARD_IDX);
-// }
 
 CardPile Board::column(size_t idx) const {
 	if (idx == DECK_IDX) return draw_pile;
@@ -143,22 +72,10 @@ struct BoardChecker {
 	size_t get_ace_idx(size_t n) const { return board.ACE_IDX + n; }
 
 	// /// Properties of the card at an index
-	// // Check if the card at an index is empty
-	// bool is_empty(size_t idx) const { return board.index(idx).empty(); }
-	// // Check if the card at an index is face down
-	// bool is_face_down(size_t idx) const { return board.index(idx).face_down; }
-	// // Check if the card at an index is a king
-	// bool is_king(size_t idx) const { return board.index(idx).rank() == 12; }
 	// Check if the card at an index is a king
 	bool is_king(Card card) const { return card.rank() == 12; }
-	// // Check if the card at an index is an ace
-	// bool is_ace(size_t idx) const { return board.index(idx).rank() == 0; }
 	// Check if the card at an index is an ace
 	bool is_ace(Card card) const { return card.rank() == 0; }
-	// // Get the rank of a card at an index
-	// size_t get_rank(size_t idx) const { return board.index(idx).rank(); }
-	// // Get the suit of a card at an index
-	// size_t get_suit(size_t idx) const { return board.index(idx).suit(); }
 
 	Card get_last_card(size_t idx) const {
 		if (is_board(idx)) {
@@ -182,13 +99,6 @@ struct BoardChecker {
 	CardPile get_board_column(size_t idx) const {
 		return board.main_board[idx - board.BOARD_IDX];
 	}
-
-	// // Check if two cards are suits of the same color
-	// bool is_same_color(size_t idx_a, size_t idx_b) const {
-	// 	// We divide by two since the suits are laid out like Heart Diamond Club Spade
-	// 	// So the two pairs are next to each other and we can just divide and see if they are in the same "group"
-	// 	return (board.index(idx_a).suit() / 2) == (board.index(idx_b).suit() / 2);
-	// }
 
 	// Check if two cards are suits of the same color
 	bool is_same_color(Card card_a, Card card_b) const {

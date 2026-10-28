@@ -121,11 +121,6 @@ struct CardPile {
 };
 
 struct Deck : public CardPile {
-	// std::vector<Card> cards{};
-
-	// Deck();
-	// Deck(std::vector<Card> src) : cards{src} {}
-
 	template <typename RandomGen>
 	void shuffle(RandomGen& gen) {
 		std::shuffle(cards.begin(), cards.end(), gen);
@@ -136,12 +131,4 @@ struct Deck : public CardPile {
 	std::optional<Card> view_top_card() const;
 
 	Deck clone() const;
-
-	// friend std::ostream& operator<<(std::ostream& os, const Deck& deck) {
-	// 	for (auto&& elem : deck.cards) {
-	// 		os << elem << ", ";
-	// 	}
-
-	// 	return os;
-	// }
 };
