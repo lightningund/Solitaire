@@ -88,6 +88,11 @@ struct CardPile {
 	[[nodiscard]] Card& operator[](size_t idx);
 
 	friend void move_tail(CardPile& src, CardPile& dst, size_t cutoff) {
+		// If the dst has an empty card at the end, get rid of it so it can be replaced
+		if (dst.back().empty()) {
+			dst.cards.pop_back();
+		}
+
 		dst.cards.insert(
 			dst.cards.end(),
 			std::make_move_iterator(src.cards.begin() + cutoff),
@@ -97,6 +102,11 @@ struct CardPile {
 
 		// Make sure to maintain the invariant
 		if (src.cards.empty()) {
+			src.cards.push_back(EMPTY_CARD);
+		}
+
+		// If we copied over no cards and cleared out dst at the start, then we would be left without the empty card
+		if (dst.cards.empty()) {
 			src.cards.push_back(EMPTY_CARD);
 		}
 	}
