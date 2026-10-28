@@ -108,8 +108,9 @@ void test_node_serial() {
 }
 
 struct Robot {
-	// Deck + Flip Pile + Aces + Columns * Max Rows
-	static constexpr size_t num_input = 1 + 1 + 4 + 7 * (7 + 13 - 1);
+	// Deck + Flip Pile + Aces + Columns * Max Rows + Tries
+	// We add in the tries so that it can get itself unstuck as it tries over and over
+	static constexpr size_t num_input = 1 + 1 + 4 + 7 * (7 + 13 - 1) + 1;
 	static constexpr size_t num_output = 2;
 
 	std::array<Node, num_input> inputs{};
@@ -471,6 +472,10 @@ void run_robot(Robot& robot, Board& board, size_t num_turns, RNG& gen) {
 	};
 
 	for (int i = 0; i < num_turns; ++i) {
+		size_t idx_a;
+		size_t idx_b;
+		size_t tries = 0;
+
 		std::vector<double> board_arr{};
 
 		for (size_t i = 0; i < Board::BOARD_IDX; ++i) {
@@ -491,27 +496,40 @@ void run_robot(Robot& robot, Board& board, size_t num_turns, RNG& gen) {
 			}
 		}
 
-		// std::cout << board_arr << "\n";
+		board_arr.push_back(tries);
 
-		robot.set_inputs(board_arr);
+		do {
+			board_arr.back() = tries++;
+			// std::cout << board_arr << "\n";
 
-		// std::cout << "\r";
-		// for (auto& n : robot.nodes) {
-		// 	n.serialize(std::cout);
-		// }
+			robot.set_inputs(board_arr);
 
-		robot.backprop();
+			// std::cout << "\r";
+			// for (auto& n : robot.nodes) {
+			// 	n.serialize(std::cout);
+			// }
 
-		// std::cout << robot.outputs << "\n";
+			robot.backprop();
 
-		size_t idx_a = pick_move(robot.outputs[0].value);
-		size_t idx_b = pick_move(robot.outputs[1].value);
-		// std::cout << ", indices: " << idx_a << ", " << idx_b << "\n";
+			// std::cout << robot.outputs << "\n";
+
+			idx_a = pick_move(robot.outputs[0].value);
+			idx_b = pick_move(robot.outputs[1].value);
+		} while(!board.is_legal_move(idx_a, idx_b) && tries < 5000);
+
+		std::cout << ", indices: " << idx_a << ", " << idx_b << "| Tries: " << tries << "\n";
 		if (board.is_legal_move(idx_a, idx_b)) {
 			board.perform_move(idx_a, idx_b);
 		}
-		// std::cout << board << "\n";
+		std::cout << board << "\n";
 	}
+}
+
+template <typename RNG>
+void robo_player(RNG& gen, Board& board) {
+	Robot robot{gen};
+
+	run_robot(robot, board, 100, gen);
 }
 
 void evolution() {
@@ -617,7 +635,9 @@ int main() {
 	// std::cout << robot << "\n";
 	// std::cout << board.draw_pile.cards << "\n";
 
-	evolution();
+	robo_player(g, board);
+
+	// evolution();
 
 	return 0;
 }
