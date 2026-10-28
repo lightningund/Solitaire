@@ -19,7 +19,14 @@ void Board::move_card(size_t src, size_t dst) {
 	column(dst).push(temp);
 }
 
+void Board::clear() {
+	for (int i = 0; i < Board::END_IDX; ++i) {
+		column(i).clear();
+	}
+}
+
 void Board::deal(Deck& deck) {
+	clear();
 	draw_pile = deck.clone();
 	for (size_t col = 0; col < COLS; ++col) {
 		for (size_t row = 0; row <= col; ++row) {

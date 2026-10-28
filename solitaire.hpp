@@ -52,6 +52,8 @@ struct Board {
 	Deck draw_pile{};
 	CardPile flipped{};
 
+	void clear();
+
 	void deal(Deck& deck);
 
 	CardPile column(size_t idx) const;

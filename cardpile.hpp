@@ -121,6 +121,8 @@ struct CardPile {
 };
 
 struct Deck : public CardPile {
+	Deck();
+
 	template <typename RandomGen>
 	void shuffle(RandomGen& gen) {
 		std::shuffle(cards.begin(), cards.end(), gen);
