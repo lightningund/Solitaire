@@ -128,3 +128,22 @@
 		- Check if there is a card behind to flip
 		- If the destination was also on the board
 			- Move any cards below
+
+
+
+```c++
+#define JOIN_EXPAND(a, b)        a##b
+#define JOIN(a, b)               JOIN_EXPAND(a, b)
+
+#define SECOND_EXPAND(a, b, ...) b
+#define SECOND(...)              EXPAND(SECOND_EXPAND(__VA_ARGS__))
+
+#define HIDDEN0                  unused, 0
+#define CHECK0(value)            SECOND(JOIN(HIDDEN, value), 1, unused)
+
+#define HELLO0                   std::cout << "Hello"
+#define HELLO1
+#define HELLO(value)             JOIN(HELLO, CHECK0(value))
+```
+
+`#define MIN_ONE(a, ...) a` being called with just one argument works on every compiler I tested on godbolt. But apparently it is a restriction in some versions of C/C++

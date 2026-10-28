@@ -397,19 +397,23 @@ void test_robot_serial() {
 }
 
 void console_player(Board& board) {
-	std::cout << board << "\n";
+	while (true) {
+		std::cout << board << "\n";
 
-	size_t idx_a;
-	std::cin >> idx_a;
+		size_t idx_a;
+		std::cin >> idx_a;
 
-	std::cout << idx_a << ": " << board.column(idx_a) << "\n";
+		std::cout << idx_a << ": " << board.column(idx_a) << "\n";
 
-	size_t idx_b;
-	std::cin >> idx_b;
+		size_t idx_b;
+		std::cin >> idx_b;
 
-	std::cout << idx_b << ": " << board.column(idx_b) << "\n";
+		std::cout << idx_b << ": " << board.column(idx_b) << "\n";
 
-	std::cout << board.is_legal_move(idx_a, idx_b) << "\n";
+		std::cout << board.is_legal_move(idx_a, idx_b) << "\n";
+
+		board.perform_move(idx_a, idx_b);
+	}
 }
 
 template <typename RNG>

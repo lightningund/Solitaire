@@ -6,6 +6,8 @@
 
 #include "solitaire.hpp"
 
+// TODO: Make a `CardPile` class that can do all the logic of holding a vector of cards, but always at least having the empty card
+
 // ONLY FOR DEBUGGING AND USER FACING
 std::string Card::get_print() const {
 	if (face_down) return FACE_DOWN_STRING;
@@ -136,8 +138,9 @@ void Board::pop_card(size_t idx) {
 }
 
 void Board::move_card(size_t src, size_t dst) {
-	index(dst) = index(src);
-	index(src) = EMPTY_CARD;
+	auto temp = column(src).back();
+	column(src).pop_back();
+	column(dst).push_back(temp);
 }
 
 void Board::deal(Deck& deck) {
@@ -188,6 +191,15 @@ std::vector<Card> Board::column(size_t idx) const {
 	if (idx == FLIP_IDX) { return flipped; }
 
 	return {};
+}
+
+std::vector<Card>& Board::column(size_t idx) {
+	if (idx >= BOARD_IDX) { return main_board[idx - BOARD_IDX]; }
+	if (idx >= ACE_IDX && idx < BOARD_IDX) { return aces[idx - ACE_IDX]; }
+	if (idx == FLIP_IDX) { return flipped; }
+
+	// Throw an error if it's not one of the main ones
+	return main_board[idx + 100];
 }
 
 // A whole bunch of functions designed to be used when checking for move legality
@@ -341,6 +353,16 @@ bool Board::is_legal_move(size_t src, size_t dst) const {
 	return bc.is_legal_move(src, dst);
 }
 
+template <typename T>
+void move_tail(std::vector<T>& src, std::vector<T>& dst, size_t cutoff) {
+	dst.insert(
+		dst.end(),
+		std::make_move_iterator(src.begin() + cutoff),
+		std::make_move_iterator(src.end())
+	);
+	src.erase(src.begin() + cutoff, src.end());
+}
+
 void Board::perform_move(size_t src, size_t dst) {
 	if (!is_legal_move(src, dst)) return;
 
@@ -361,41 +383,28 @@ void Board::perform_move(size_t src, size_t dst) {
 				if (c.empty() || c.face_down) continue;
 				if (bc.can_go_under(c, target)) {
 					// Move the rest of the vector from one column to the other
-					// if the last card was face down then flip it
+					move_tail(column(src), column(dst), i);
+					break;
 				}
+			}
+
+			// if the last card in the column is now face down, flip it
+			if (!column(src).empty()) {
+				column(src).back().face_down = false;
 			}
 
 			return;
 		}
-	}
 
-	move_card(src, dst);
-	// if src is an ace or the flip pile, then pop it
-
-	if (bc.is_deck(src)) {
-	} else {
 		move_card(src, dst);
 
-		if (bc.is_ace_slot(src) || bc.is_flip_pile(src)) {
-			pop_card(src);
-		} else if (is_board(src)) {
-			if (!is_top_row(src) && is_face_down(one_above(src))) {
-				flip_card(one_above(src));
-			}
-
-			if (is_board(dst)) {
-				auto temp_a = src;
-				auto temp_b = dst;
-				while (!is_bottom_row(temp_a)) {
-					temp_a = one_below(temp_a);
-					temp_b = one_below(temp_b);
-
-					if (is_empty(temp_a)) break;
-
-					move_card(temp_a, temp_b);
-				}
-			}
+		// if the last card in the column is now face down, flip it
+		if (!column(src).empty()) {
+			column(src).back().face_down = false;
 		}
+	} else {
+		move_card(src, dst);
+		pop_card(src);
 	}
 }
 

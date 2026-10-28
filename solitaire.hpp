@@ -148,6 +148,7 @@ struct Board {
 	Card& index(size_t idx);
 
 	std::vector<Card> column(size_t idx) const;
+	std::vector<Card>& column(size_t idx);
 
 	bool is_legal_move(size_t idx_a, size_t idx_b) const;
 
