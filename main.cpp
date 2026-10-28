@@ -25,6 +25,7 @@
 #include <span>
 #include <sstream>
 
+#include "cardpile.hpp"
 #include "solitaire.hpp"
 
 struct Node;
@@ -107,7 +108,8 @@ void test_node_serial() {
 }
 
 struct Robot {
-	static constexpr size_t num_input = Board::END_IDX - 1;
+	// Deck + Flip Pile + Aces + Columns * Max Rows
+	static constexpr size_t num_input = 1 + 1 + 4 + 7 * (7 + 13 - 1);
 	static constexpr size_t num_output = 2;
 
 	std::array<Node, num_input> inputs{};
@@ -471,9 +473,25 @@ void run_robot(Robot& robot, Board& board, size_t num_turns, RNG& gen) {
 	for (int i = 0; i < num_turns; ++i) {
 		std::vector<double> board_arr{};
 
-		for (size_t i = 0; i < Board::END_IDX; ++i) {
-			board_arr.push_back(board.cindex(i).get_rep_num());
+		for (size_t i = 0; i < Board::BOARD_IDX; ++i) {
+			board_arr.push_back(board.column(i).back().get_rep_num());
 		}
+
+		const size_t MAX_ROWS = Board::COLS + 13 - 1;
+
+		// We pad the board columns to ensure a consistent size and layout
+		for (size_t i = Board::BOARD_IDX; i < Board::END_IDX; ++i) {
+			auto col = board.column(i);
+			for (size_t j = 0; j < MAX_ROWS; ++j) {
+				if (j < col.size()) {
+					board_arr.push_back(col[j].get_rep_num());
+				} else {
+					board_arr.push_back(EMPTY_REP);
+				}
+			}
+		}
+
+		std::cout << board_arr << "\n";
 
 		robot.set_inputs(board_arr);
 
@@ -588,7 +606,7 @@ int main() {
 
 	// console_player(board);
 
-	random_player(g, board);
+	// random_player(g, board);
 
 	// Robot robot{g};
 	// for (int i = 0; i < 100; ++i) {
@@ -599,7 +617,7 @@ int main() {
 	// std::cout << robot << "\n";
 	// std::cout << board.draw_pile.cards << "\n";
 
-	// evolution();
+	evolution();
 
 	return 0;
 }
