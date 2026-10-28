@@ -1,0 +1,1 @@
+g++ -pg -O3 robot.cpp cardpile.cpp solitaire.cpp main.cpp -std=c++23
