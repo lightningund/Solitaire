@@ -72,7 +72,7 @@ struct BoardChecker {
 	// Checks if the index is one of the four ace slots
 	bool is_ace_slot(size_t idx) const { return idx >= board.ACE_IDX && idx < board.BOARD_IDX; }
 	// Checks if the index is in the main board of cards
-	bool is_board(size_t idx) const { return idx >= board.BOARD_IDX; }
+	bool is_board(size_t idx) const { return idx >= board.BOARD_IDX && idx < board.END_IDX; }
 
 	/// Index modifying functions
 	// Get the index of the nth ace

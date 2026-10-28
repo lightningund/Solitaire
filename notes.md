@@ -129,8 +129,6 @@
 		- If the destination was also on the board
 			- Move any cards below
 
-
-
 ```c++
 #define JOIN_EXPAND(a, b)        a##b
 #define JOIN(a, b)               JOIN_EXPAND(a, b)

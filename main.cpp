@@ -19,6 +19,7 @@
 // turned card
 
 #include <algorithm>
+#include <cmath>
 #include <iomanip>
 #include <iostream>
 #include <random>
@@ -110,6 +111,7 @@ void test_node_serial() {
 struct Robot {
 	// Deck + Flip Pile + Aces + Columns * Max Rows + Tries
 	// We add in the tries so that it can get itself unstuck as it tries over and over
+	// TODO: Penalize using a lot of tries
 	static constexpr size_t num_input = 1 + 1 + 4 + 7 * (7 + 13 - 1) + 1;
 	static constexpr size_t num_output = 2;
 
@@ -128,12 +130,10 @@ struct Robot {
 		// Randomly connects the outputs to the inputs
 		for (auto& outnode : outputs) {
 			for (size_t i = 0; i < num_input; ++i) {
-				if (prob_dist(gen) > 0.5) {
-					outnode.cons.push_back(Connection {
-						weight_dist(gen),
-						i
-					});
-				}
+				outnode.cons.push_back(Connection {
+					weight_dist(gen),
+					i
+				});
 			}
 		}
 	}
@@ -466,10 +466,19 @@ void run_robot(Robot& robot, Board& board, size_t num_turns, RNG& gen) {
 	// 	}
 	// };
 
-	// Just clamps
+	// // Just clamps
+	// auto pick_move = [&](double value) -> size_t {
+	// 	return std::clamp(value, 0.0, (double)(Board::END_IDX - 1));
+	// };
+
+	// Modulo
 	auto pick_move = [&](double value) -> size_t {
-		return std::clamp(value, 0.0, (double)(Board::END_IDX - 1));
+		auto modu = std::fmod(value, (double)(Board::END_IDX) - 1.0);
+		if (modu < 0) modu += (double)(Board::END_IDX);
+		return modu;
 	};
+
+	// std::cout << robot << "\n";
 
 	for (int i = 0; i < num_turns; ++i) {
 		size_t idx_a;
@@ -511,18 +520,22 @@ void run_robot(Robot& robot, Board& board, size_t num_turns, RNG& gen) {
 
 			robot.backprop();
 
-			// std::cout << robot.outputs << "\n";
-
 			idx_a = pick_move(robot.outputs[0].value);
 			idx_b = pick_move(robot.outputs[1].value);
+
+			// std::cout << "Raw: " << robot.outputs << "\n";
+			// std::cout << "Clamped: " << idx_a << ", " << idx_b << "\n";
+
 		} while(!board.is_legal_move(idx_a, idx_b) && tries < 5000);
 
-		std::cout << ", indices: " << idx_a << ", " << idx_b << "| Tries: " << tries << "\n";
+		// std::cout << "Indices: " << idx_a << ", " << idx_b << "| Tries: " << tries << "\n";
 		if (board.is_legal_move(idx_a, idx_b)) {
 			board.perform_move(idx_a, idx_b);
 		}
-		std::cout << board << "\n";
+		// std::cout << board << "\n";
 	}
+
+	// std::cout << board << "\n";
 }
 
 template <typename RNG>
@@ -533,7 +546,7 @@ void robo_player(RNG& gen, Board& board) {
 }
 
 void evolution() {
-	const size_t pop_size = 1000;
+	const size_t pop_size = 100;
 	// How many times we duplicate the surviving members
 	// This dictates the survival percentage
 	// So 2 would be the top 50%, and 10 would be the top 10%
@@ -545,7 +558,7 @@ void evolution() {
 	const size_t num_runs = 10;
 
 	const size_t turns = 10;
-	const size_t generations = 200;
+	const size_t generations = 1;
 
 	std::random_device random_dev;
 	std::mt19937 gen(random_dev());
@@ -553,8 +566,8 @@ void evolution() {
 	std::vector<Robot> robots{};
 
 	for (int i = 0; i < pop_size; ++i) {
-		// robots.push_back(Robot(gen));
-		robots.push_back(Robot{});
+		robots.push_back(Robot(gen));
+		// robots.push_back(Robot{});
 	}
 
 	// Assumes the robots list is already sorted
@@ -573,9 +586,9 @@ void evolution() {
 		// X Filter the best
 		// X Duplicate and mutate
 
-	// for (int generation = 0; generation < generations; ++generation) {
-	size_t generation = 0;
-	while (++generation) {
+	for (int generation = 0; generation < generations; ++generation) {
+	// size_t generation = 0;
+	// while (++generation) {
 		// TODO: Parallelize
 		for (size_t i = 0; i < pop_size; ++i) {
 			auto& robot = robots[i];
@@ -589,9 +602,10 @@ void evolution() {
 				robot.score += board.score();
 			}
 
-			// if (i % 100 == 0) {
-				// std::cout << 100.0 * (float)i / pop_size << "%\r";
-			// }
+			if (i % 10 == 0) {
+				std::cout << 100.0 * (float)i / pop_size << "%\r";
+				std::cout.flush();
+			}
 		}
 
 		// Shuffle the population so that ones with the same score get moved around
@@ -635,9 +649,9 @@ int main() {
 	// std::cout << robot << "\n";
 	// std::cout << board.draw_pile.cards << "\n";
 
-	robo_player(g, board);
+	// robo_player(g, board);
 
-	// evolution();
+	evolution();
 
 	return 0;
 }
