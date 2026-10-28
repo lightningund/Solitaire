@@ -227,6 +227,9 @@ struct BoardChecker {
 			return can_click_deck();
 		}
 
+		// If we are trying to pull from an empty source, then it's obviously nonsense
+		if (board.column(src).empty()) return false;
+
 		if (is_board(dst)) {
 			// std::cout << "Board Target\n";
 			if (is_board(src)) {
